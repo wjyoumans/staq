@@ -20,42 +20,24 @@ namespace qasm {
    *  To keep preprocessor inclusion semantics, all definitions
    *  in a file are automatically promoted to the global scope
    */
-  class file : public ast_node {
+  class source_unit : public ast_node {
   public:
-    file* create(ast_context* ctx, uint32_t loc, std::string_view filename,
-                 vector<stmt*>& body, bool output = false)
-    {
-      return new (*ctx) file(loc, filename, body, output);
-    }
-
-    std::string_view filename() const
-    {
-      return filename_;
-    }
-
-    bool output() const
-    {
-      return output_;
-    }
-
-    vector<stmt*>& body() const
-    {
-      return body_;
-    }
-
-  private:
-    std::string_view filename_;
-    bool output_;
-
-    vector<stmt*> body_;
-
-    file(uint32_t loc, std::string_view filename, vector<stmt*>& body, bool output)
+    source_unit(uint32_t loc, std::string_view filename, vector<stmt*>& body, bool output)
       : ast_node(loc)
       , filename_(filename)
       , body_(body)
       , output_(output)
     {}
 
+    std::string_view filename;
+    bool output;
+    vector<stmt*> body;
+
+  protected:
+	ast_node_kinds get_kind() const override
+	{
+      return ast_node_kinds::source_unit;
+	}
   };
 
 }

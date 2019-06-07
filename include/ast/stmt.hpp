@@ -18,12 +18,6 @@ namespace qasm {
   /*! \brief Statement base class */
   class stmt : public ast_node {
   public:
-    stmt* create(ast_context* ctx, uint32_t location)
-    {
-      return new (*ctx) stmt(location);
-    }
-
-  protected:
     stmt(uint32_t location)
       : ast_node(location)
     {}
@@ -34,31 +28,18 @@ namespace qasm {
   /*! \brief Conditional statement */
   class stmt_if : public stmt {
   public:
-    stmt_if* create(ast_context* ctx, uint32_t location, expr* cond, stmt* then)
-    {
-      return new (*ctx) stmt_if(location, cond, then);
-    }
-
-    expr& cond()
-    {
-      return *(cond_);
-    }
-
-    stmt& then()
-    {
-      return *(then_);
-    }
-
-  protected:
-    expr* cond_;
-    stmt* then_;
-
     stmt_if(uint32_t location, expr* cond, stmt* then)
       : ast_node(location)
       , cond_(cond)
       , then_(then)
     {}
 
+    ~stmt_if
+
+    expr* cond_;
+    stmt* then_;
+
+  protected:
     ast_node_kinds do_get_kind() const override
 	{
       return ast_node_kinds::stmt_if;
@@ -69,31 +50,16 @@ namespace qasm {
   /*! \brief Measurement statement */
   class stmt_measure : public stmt {
   public:
-    stmt_measure* create(ast_context* ctx, uint32_t location, expr_var* src, expr_var* dest)
-    {
-      return new (*ctx) stmt_measure(location, src, dest);
-    }
-
-    expr& source()
-    {
-      return *(src_);
-    }
-
-    stmt& dest()
-    {
-      return *(dest_);
-    }
-
-  protected:
-    expr_var* src_;
-    expr_var* dest_;
-
     stmt_measure(uint32_t location, expr_var* src, expr_var* dest)
       : ast_node(location)
       , src_(src)
       , dest_(dest)
     {}
 
+    expr_var* src_;
+    expr_var* dest_;
+
+  protected:
     ast_node_kinds do_get_kind() const override
 	{
       return ast_node_kinds::stmt_measure;
