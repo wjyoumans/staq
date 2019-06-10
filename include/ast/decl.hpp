@@ -5,299 +5,199 @@
 *------------------------------------------------------------------------------------------------*/
 #pragma once
 
-#include "../ast_context.hpp"
-#include "../ast_node.hpp"
-#include "../ast_node_kinds.hpp"
+#include "utils/list.hpp"
 
-#include "stmt.hpp"
-#include "types.hpp"
+#include "ast/kinds.hpp"
+#include "ast/ast_node.hpp"
+#include "ast/types.hpp"
+#include "ast/stmt.hpp"
 
 #include <memory>
 #include <string>
 #include <vector>
+#include <set>
 
-namespace tweedledee {
-namespace qasm {
+namespace synthewareQ {
+namespace ast {
 
-  enum class register_type : unsigned short {
-    classical,
-    quantum,
+  enum class qualifier {
+    dirty
   };
 
   /*! \brief Declaration base class */
-  class stmt_decl : public stmt {
-  public:
-    stmt_decl* create(ast_context* ctx, uint32_t location, std::string_view identifier)
-    {
-      return new (*ctx) stmt_decl(location, identifier);
-    }
-
-    std::string_view identifier const
-    {
-      return identifier_;
-    }
-
-  protected:
+  class Decl : public AST_node {
+  private:
     std::string_view identifier_;
-
-    stmt_decl(uint32_t location, std::string_view identifier)
-      : stmt(location)
+    
+  public:
+    Decl(Location loc, ast_nodes kind, std::string_view identifier)
+      : AST_node(loc, kind)
       , identifier_(identifier)
     {}
+
+    virtual ~Decl() = 0;
+
+    std::string_view identifier() const {
+      return identifier_;
+    }
   };
+  Decl::~Decl() {}
 
 
   /*! \brief Register declaration */
-  class decl_register : public decl {
-  public:
-    decl_register* create(ast_context* ctx, uint23_t location, register_type type,
-                          std::string_view identifier, uint32_t size)
-    {
-      return new (*ctx) decl_register(location, type, identifier, size);
-    }
+  class Decl_var final : public Decl {
+  private:
+    std::unique_ptr<Type> type_;
+    std::set<qualifier> qualifiers_;
 
-    bool is_quantum() const
-    {
-      return type_ == register_type::quantum;
-    }
-
-    uint32_t size() const
-    {
-      return size_;
-    }
-
-  protected:
-    register_type type_;
-    uint32_t size_;
-
-    decl_register(uint32_t location, register_type type, std::string_view identifier,
-                  uint32_t size)
-      : stmt_decl(location, identifier)
+    Decl_var(Location loc, std::string_view identifier, Type* type, std::set<qualifier> qualifiers)
+      : Decl(loc, ast_nodes::decl_var, identifier)
       , type_(type)
-      , size_(size)
+      , qualifiers_(qualifiers)
     {}
 
-    ast_node_kinds do_get_kind() const override
-    {
-      return ast_node_kinds::decl_register;
+  public:
+    Decl_var* create(Location loc, std::string_view identifier, Type* type, std::set<qualifier> qualifiers) {
+      return new Decl_var(loc, identifier, type, qualifiers);
+    }
+
+    Decl_var* create(Location loc, std::string_view identifier, Type* type) {
+      return new Decl_var(loc, identifier, type, { });
+    }
+
+    Decl_var* create_dirty(Location loc, std::string_view identifier, Type* type) {
+      return new Decl_var(loc, identifier, type, { qualifier::dirty });
+    }
+
+    Type* get_type() const {
+      return type_.get();
+    }
+
+    void set_type(Type* type) {
+      type_.reset(type);
+    }
+
+    bool is_dirty() const {
+      return qualifiers_.find(qualifier::dirty) != qualifiers_.end();
     }
 
   };
 
+  using Decl_var_list = utils::unique_list<Decl_var>;
 
-  /*! \brief Ancilla declaration */
-  class decl_ancilla final : public decl_register {
+
+  /*! \brief Base class for different types of gate declarations */
+  class Decl_circuit : public Decl {
+  private:
+    std::unique_ptr<Decl_var_list> params_;
+    std::unique_ptr<Decl_var_list> formals_;
+
   public:
-    static decl_ancilla* create(ast_context* ctx, uint32_t location,
-                               std::string_view identifier, uint32_t size, bool dirty)
-    {
-      return new (*ctx) decl_ancilla(location, identifier, size, dirty);
-    }
-
-    bool is_dirty() const
-    {
-      return dirty_;
-    }
-
-  protected:
-    bool dirty_;
-
-    decl_ancilla(uint32_t location, std::string_view identifier, uint32_t size, bool dirty)
-      : decl_register(location, identifier, size)
-      , dirty_(dirty)
+    Decl_circuit(Location loc,
+                 ast_nodes kind,
+                 std::string_view identifier,
+                 Decl_var_list* params,
+                 Decl_var_list* formals)
+      : Decl(loc, kind, identifier)
+      , params_(params)
+      , formals_(formals)
     {}
 
-    ast_node_kinds do_get_kind() const override
+    ~Decl_circuit() = 0;
+
+    uint32_t num_params() const
     {
-      return ast_node_kinds::decl_ancilla;
+      return params_->size();
     }
 
-  };
-
-
-  /*! \brief Parameter declaration */
-  // TODO: move into a single variable declaration
-  class decl_param final : public stmt_decl {
-  public:
-    static decl_param* create(ast_context* ctx, uint32_t location, std::string_view identifier)
-    {
-      return new (*ctx) decl_param(location, identifier);
+    Decl_var_list* get_params() const {
+      return params_.get();
     }
 
-  protected:
-    decl_param(uint32_t location, std::string_view identifier)
-      : stmt_decl(location, identifier)
-    {}
-
-    ast_node_kinds do_get_kind() const override
-    {
-      return ast_node_kinds::decl_param;
-    }
-
-  };
-
-  /*! \brief Gate declaration */
-  class decl_gate : public stmt_decl {
-
-  public:
-    static decl_gate* create(ast_context* ctx, uint32_t location, std::string_view identifier,
-                             vector<decl_param*>& parameters, vector<std::string_view>& formals)
-                             
-    {
-      return new (*ctx) decl_gate(location, identifier, parameters, formals);
-    }
-
-    /* Gate type */
-    virtual bool is_opaque() const;
-    virtual bool is_oracle() const;
-
-    /* Parameters */
-    bool has_parameters() const
-    {
-      return parameters_.size() > 0;
-    }
-    
-    uint32_t num_parameters() const
-    {
-      return parameters_.size();
-    }
-
-    vector<decl_param*>& parameters()
-    {
-      return parameters_;
-    }
-
-    /* Formals */
     uint32_t num_formals() const
     {
-      return formals_.size();
+      return formals_->size();
     }
 
-    vector<std::string_view>& formals()
-    {
-      return formals_;
+    Decl_var_list* get_formals() const {
+      return formals_.get();
     }
-
-  protected:
-    decl_gate(uint32_t location, std::string_view identifier,
-              vector<decl_param*>& parameters, vector<std::string_view>& formals)
-      : stmt_decl(location, identifier)
-      , parameters_(parameters)
-      , formals_(formals)
-	{}
-
-	ast_node_kinds do_get_kind() const override
-	{
-      return ast_node_kinds::decl_gate;
-	}
-
   };
+  Decl_circuit::~Decl_circuit() {};
+    
+        
+    
+  /*! \brief Gate declaration */
+  class Decl_gate final : public Decl_circuit {
+  private:
+    std::unique_ptr<Unitary_list> body_;
 
-
-  /*! \brief Regular gate declaration */
-  class decl_unitary_gate : public decl_gate {
+    Decl_gate(Location loc,
+              std::string_view identifier,
+              Decl_var_list* params,
+              Decl_var_list* formals,
+              Unitary_list* body)
+      : Decl_circuit(loc, ast_nodes::decl_gate, identifier, params, formals)
+      , body_(body)
+    {}
 
   public:
-    static decl_unitary_gate* create(ast_context* ctx, uint32_t location, std::string_view identifier,
-                                     vector<decl_param*>& parameters, vector<std::string_view>& formals,
-                                     vector<stmt_unitary*>& body)
-                             
+    static Decl_gate* create(Location loc,
+                             std::string_view identifier,
+                             Decl_var_list* params,
+                             Decl_var_list* formals,
+                             Unitary_list* body)
     {
-      return new (*ctx) decl_unitary_gate(location, identifier, parameters, formals, body);
+      return new Decl_gate(loc, identifier, params, formals, body);
     }
 
-    bool is_opaque const
-    {
-      return false;
+    Unitary_list* get_body() const {
+      return body_.get();
     }
-
-    bool is_oracle const
-    {
-      return false;
-    }
-
-    vector<stmt_unitary*>& body()
-    {
-      return body_;
-    }
-
-  protected:
-    vector<stmt_unitary*> body_;
-    
-    decl_unitary_gate(uint32_t location, std::string_view identifier,
-                      vector<decl_param*>& parameters, vector<std::string_view>& formals,
-                      vector<stmt_unitary*>& body)
-      : decl_gate(location, identifier, parameters, formals)
-      , body_(body)
-	{}
 
   };
 
 
   /*! \brief Opaque gate declaration */
-  class decl_opaque_gate : public decl_gate {
+  class Decl_opaque final : public Decl_circuit {
+  private:
+    Decl_opaque(Location loc, std::string_view identifier, Decl_var_list* params, Decl_var_list* formals)
+      : Decl_circuit(loc, ast_nodes::decl_opaque, identifier, params, formals)
+    {}
 
   public:
-    static decl_opaque_gate* create(ast_context* ctx, uint32_t location, std::string_view identifier,
-                                    vector<decl_param*>& parameters, vector<std::string_view>& formals)
+    static Decl_opaque* create(Location loc,
+                               std::string_view identifier,
+                               Decl_var_list* params,
+                               Decl_var_list* formals)
     {
-      return new (*ctx) decl_opaque_gate(location, identifier, parameters, formals);
+      return new Decl_opaque(loc, identifier, params, formals);
     }
-
-    bool is_opaque const
-    {
-      return true;
-    }
-
-    bool is_oracle const
-    {
-      return false;
-    }
-
-  protected:
-    decl_opaque_gate(uint32_t location, std::string_view identifier,
-                     vector<decl_param*>& parameters, vector<std::string_view>& formals)
-      : decl_gate(location, identifier, parameters, formals)
-	{}
-
   };
 
 
   /*! \brief Oracle gate declaration */
-  class decl_oracle_gate : public decl_gate {
+  class Decl_oracle final : public Decl_circuit {
+  private:
+    std::string_view filename_;
+
+    Decl_oracle(Location loc, std::string_view identifier, Decl_var_list* formals, std::string_view filename)
+      : Decl_circuit(loc, ast_nodes::decl_oracle, identifier, nullptr, formals)
+      , filename_(filename)
+    {}
 
   public:
-    static decl_oracle_gate* create(ast_context* ctx, uint32_t location, std::string_view identifier,
-                                    vector<decl_param*>& parameters, vector<std::string_view>& formals,
-                                    std::string_view filename)
+    static Decl_oracle* create(Location loc,
+                               std::string_view identifier,
+                               Decl_var_list* formals,
+                               std::string_view filename)
     {
-      return new (*ctx) decl_oracle_gate(location, identifier, parameters, formals, filename);
+      return new Decl_oracle(loc, identifier, formals, filename);
     }
 
-    bool is_opaque const
-    {
-      return false;
-    }
-
-    bool is_oracle const
-    {
-      return true;
-    }
-
-    std::string_view filename() const
-    {
+    std::string_view filename() const {
       return filename_;
     }
-
-  protected:
-    std::string_view filename_;
-    
-    decl_opaque_gate(uint32_t location, std::string_view identifier,
-                     vector<decl_param*>& parameters, vector<std::string_view>& formals,
-                     std::string_view filename)
-      : decl_gate(location, identifier, parameters, formals)
-      , filename_(filename)
-	{}
 
   };
 

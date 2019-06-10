@@ -5,6 +5,8 @@
 *------------------------------------------------------------------------------------------------*/
 #pragma once
 
+#include "utils/list.hpp"
+
 #include "ast/kinds.hpp"
 #include "ast/ast_node.hpp"
 #include "ast/types.hpp"
@@ -14,6 +16,8 @@
 #include <vector>
 
 #include <math.h>
+
+#include <iostream>
 
 namespace synthewareQ {
 namespace ast {
@@ -77,7 +81,7 @@ namespace ast {
       return op_ == op;
     }
 
-    Expr* get_left() {
+    Expr* get_left() const {
       return left_.get();
     }
 
@@ -85,7 +89,7 @@ namespace ast {
       left_.reset(left);
     }
 
-    Expr* get_right() {
+    Expr* get_right() const {
       return right_.get();
     }
 
@@ -121,7 +125,7 @@ namespace ast {
 	  return op_ == op;
 	}
 
-    Expr* get_subexpr() {
+    Expr* get_subexpr() const {
       return subexpr_.get();
     }
 
@@ -137,15 +141,14 @@ namespace ast {
   private:
     Expr_pi(Location loc)
       : Expr(loc, ast_nodes::expr_pi)
-    {}
+      { }
 
   public:
     static Expr_pi* create(Location loc) {
       return new Expr_pi(loc);
     }
 
-    double numeric_value() const
-    {
+    double numeric_value() const {
       return M_PI;
     }
 
@@ -193,15 +196,27 @@ namespace ast {
 
   };
 
+  /* \brief Access paths (variables or dereferences) */
+  // TODO: Move functionality into Expr_AP as needed
+  class Expr_AP : public Expr {
+  public:
+    Expr_AP(Location loc, ast_nodes kind)
+      : Expr(loc, kind)
+    {}
+
+    virtual ~Expr_AP() = 0;
+  };
+  Expr_AP::~Expr_AP() {}
+
 
   /* \brief Variable expressions */
-  class Expr_var final : public Expr {
+  class Expr_var final : public Expr_AP {
   private:
     std::string_view name_;
     std::unique_ptr<Type> type_;
 
     Expr_var(Location loc, std::string_view name, Type* type)
-      : Expr(loc, ast_nodes::expr_var)
+      : Expr_AP(loc, ast_nodes::expr_var)
       , name_(name)
       , type_(type)
     {}
@@ -219,7 +234,7 @@ namespace ast {
       return type_.get() != nullptr;
     }
 
-    Type* get_type() {
+    Type* get_type() const {
       return type_.get();
     }
 
@@ -230,13 +245,13 @@ namespace ast {
   };
 
   /* \brief Offsets into a register */
-  class Expr_offset final : public Expr {
+  class Expr_offset final : public Expr_AP {
   private:
     std::unique_ptr<Expr_var> var_;
     uint32_t offset_;
 
     Expr_offset(Location loc, Expr_var* var, uint32_t offset)
-      : Expr(loc, ast_nodes::expr_offset)
+      : Expr_AP(loc, ast_nodes::expr_offset)
       , var_(var)
       , offset_(offset)
     {}
@@ -254,7 +269,7 @@ namespace ast {
       }
     }
 
-    Expr_var* get_var() {
+    Expr_var* get_var() const {
       return var_.get();
     }
 
@@ -276,70 +291,8 @@ namespace ast {
 
 
   /* \brief List of expressions */
-  class Expr_list : public AST_node {
-  private:
-    using expr_list_t = std::vector<std::unique_ptr<Expr> >;
-    expr_list_t list_;
-
-    Expr_list(Location loc)
-      : AST_node(loc, ast_nodes::expr_list)
-    {}
-
-  public:
-    static Expr_list* create(Location loc) {
-      return new Expr_list(loc);
-    }
-
-    class iterator : expr_list_t::iterator {
-    friend class Expr_list;
-    public:
-      using internal_t = expr_list_t::iterator;
-      using value_type = Expr;
-      using pointer = Expr*;
-      using reference = Expr&;
-      
-      iterator(const internal_t &it) : internal_t(it) {}
-
-      reference operator*() const {
-        return *(this->internal_t::operator*());
-      }
-
-      pointer operator->() const {
-        return this->internal_t::operator*().get();
-      }
-
-      reference operator[](size_t n) const {
-        return *(this->internal_t::operator[](n));
-      }
-
-      iterator& operator++() {
-        this->internal_t::operator++();
-        return *this;
-      }
-
-      iterator operator++(int) {
-        auto tmp = *this;
-        this->internal_t::operator++();
-        return tmp;
-      }
-    };
-      
-    iterator begin() {
-      return iterator(list_.begin());
-    }
-
-    iterator end() {
-      return iterator(list_.end());
-    }
-
-    void push_back(Expr* expr) {
-      list_.push_back(std::unique_ptr<Expr>(expr));
-    }
-
-    void insert(iterator it, Expr* expr) {
-      list_.insert(static_cast<expr_list_t::iterator>(it), std::unique_ptr<Expr>(expr));
-    }
-  };
+  using Expr_list = utils::unique_list<Expr>;
+  using AP_list = utils::unique_list<Expr_AP>;
 
 } // namespace qasm
 } // namespace tweedledee

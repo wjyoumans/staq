@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include <iostream>
+
 namespace synthewareQ {
 namespace ast {
 
@@ -40,14 +42,15 @@ namespace ast {
       : uid_(max_uid++)
       , loc_(loc)
       , kind_(kind)
-    {}
+    { std::cout << "Creating node #" << uid_ << std::endl; }
 
-    virtual ~AST_node() = 0;
+    //virtual ~AST_node() = 0;
+    ~AST_node() { std::cout << "Destroying node #" << uid_ << std::endl; }
 
     uint32_t uid() const { return uid_; }
     ast_nodes kind() const { return kind_; }
   };
-  AST_node::~AST_node() {}
+  //AST_node::~AST_node() {}
   uint32_t AST_node::max_uid = 0;
 
 }

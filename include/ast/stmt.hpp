@@ -5,259 +5,317 @@
 *------------------------------------------------------------------------------------------------*/
 #pragma once
 
-#include "../ast_context.hpp"
-#include "../ast_node.hpp"
-#include "../ast_node_kinds.hpp"
+#include "utils/list.hpp"
+
+#include "ast/kinds.hpp"
+#include "ast/ast_node.hpp"
+#include "ast/expr.hpp"
 
 #include <memory>
 #include <string>
 
-namespace tweedledee {
-namespace qasm {
+namespace synthewareQ {
+namespace ast {
+
+  /* Forward declaration */
+  class Decl;
 
   /*! \brief Statement base class */
-  class stmt : public ast_node {
+  class Stmt : public AST_node {
   public:
-    stmt(uint32_t location)
-      : ast_node(location)
+    Stmt(Location loc, ast_nodes kind)
+      : AST_node(loc, kind)
     {}
 
+    virtual ~Stmt() = 0;
   };
+  Stmt::~Stmt() {}
 
 
   /*! \brief Conditional statement */
-  class stmt_if : public stmt {
-  public:
-    stmt_if(uint32_t location, expr* cond, stmt* then)
-      : ast_node(location)
+  class Stmt_if final : public Stmt {
+  private:
+    std::unique_ptr<Expr> cond_;
+    std::unique_ptr<Stmt> then_;
+
+    Stmt_if(Location loc, Expr* cond, Stmt* then)
+      : Stmt(loc, ast_nodes::stmt_if)
       , cond_(cond)
       , then_(then)
     {}
 
-    ~stmt_if
+  public:
+    static Stmt_if* create(Location loc, Expr* cond, Stmt* then) {
+      return new Stmt_if(loc, cond, then);
+    }
 
-    expr* cond_;
-    stmt* then_;
+    Expr* get_cond() const {
+      return cond_.get();
+    }
 
-  protected:
-    ast_node_kinds do_get_kind() const override
-	{
-      return ast_node_kinds::stmt_if;
-	}
+    void set_cond(Expr* cond) {
+      cond_.reset(cond);
+    }
+
+    Stmt* get_then() const {
+      return then_.get();
+    }
+
+    void set_then(Stmt* then) {
+      then_.reset(then);
+    }
+
   };
 
 
   /*! \brief Measurement statement */
-  class stmt_measure : public stmt {
-  public:
-    stmt_measure(uint32_t location, expr_var* src, expr_var* dest)
-      : ast_node(location)
+  class Stmt_measure final : public Stmt {
+  private:
+    std::unique_ptr<Expr_AP> src_;
+    std::unique_ptr<Expr_AP> dest_;
+
+    Stmt_measure(Location loc, Expr_AP* src, Expr_AP* dest)
+      : Stmt(loc, ast_nodes::stmt_measure)
       , src_(src)
       , dest_(dest)
     {}
 
-    expr_var* src_;
-    expr_var* dest_;
+  public:
+    static Stmt_measure* create(Location loc, Expr_AP* src, Expr_AP* dest) {
+      return new Stmt_measure(loc, src, dest);
+    }
 
-  protected:
-    ast_node_kinds do_get_kind() const override
-	{
-      return ast_node_kinds::stmt_measure;
-	}
+    Expr_AP* get_src() const {
+      return src_.get();
+    }
+
+    void set_src(Expr_AP* src) {
+      src_.reset(src);
+    }
+
+    Expr_AP* get_dest() const {
+      return dest_.get();
+    }
+
+    void set_dest(Expr_AP* dest) {
+      dest_.reset(dest);
+    }
   };
 
 
   /*! \brief Reset statement */
-  class stmt_reset : public stmt {
-  public:
-    stmt_reset* create(ast_context* ctx, uint32_t location, expr_var* arg)
-    {
-      return new (*ctx) stmt_reset(location, arg);
-    }
-
-    expr& arg()
-    {
-      return *(arg_);
-    }
-
-  protected:
-    expr_var* arg_;
-
-    stmt_reset(uint32_t location, expr_var* arg)
-      : ast_node(location)
+  class Stmt_reset final : public Stmt {
+  private:
+    std::unique_ptr<Expr_AP> arg_;
+    
+    Stmt_reset(Location loc, Expr_AP* arg)
+      : Stmt(loc, ast_nodes::stmt_reset)
       , arg_(arg)
     {}
 
-    ast_node_kinds do_get_kind() const override
-	{
-      return ast_node_kinds::stmt_reset;
-	}
+  public:
+    static Stmt_reset* create(Location loc, Expr_AP* arg) {
+      return new Stmt_reset(loc, arg);
+    }
+
+    Expr_AP* get_arg() const {
+      return arg_.get();
+    }
+
+    void set_arg(Expr_AP* arg) {
+      arg_.reset(arg);
+    }
+
+  };
+
+  /*! \brief Declaration statement */
+  class Stmt_decl final : public Stmt {
+  private:
+    std::unique_ptr<Decl> decl_;
+
+    Stmt_decl(Location loc, Decl* decl)
+      : Stmt(loc, ast_nodes::stmt_decl)
+      , decl_(decl)
+    {}
+
+  public:
+    static Stmt_decl* create(Location loc, Decl* decl) {
+      return new Stmt_decl(loc, decl);
+    }
+
+    Decl* get_decl() const {
+      return decl_.get();
+    }
+
+    void set_decl(Decl* decl) {
+      decl_.reset(decl);
+    }
+
   };
 
 
   /*! \brief Unitary sub-class */
-  class stmt_unitary : public stmt {
+  class Unitary : public Stmt {
   public:
-    stmt_unitary* create(ast_context* ctx, uint32_t location)
-    {
-      return new (*ctx) stmt_unitary(location);
-    }
-
-  protected:
-    stmt_unitary(uint32_t location)
-      : stmt(location)
+    Unitary(Location loc, ast_nodes kind)
+      : Stmt(loc, kind)
     {}
 
+    virtual ~Unitary() = 0;
   };
+  Unitary::~Unitary() {}
 
 
   /*! \brief Barrier */
-  class stmt_barrier : public stmt_unitary {
-  public:
-    stmt_barrier* create(ast_context* ctx, uint32_t location, vector<expr_var*>& args)
-    {
-      return new (*ctx) stmt_barrier(location);
-    }
+  class Stmt_barrier final : public Unitary {
+  private:
+    std::unique_ptr<AP_list> args_;
 
-    vector<expr_var*>& args const
-    {
-      return args_;
-    }
-
-  protected:
-    vector<expr_var*> args_;
-    
-    stmt_barrier(uint32_t location, vector<expr_var*>& args)
-      : stmt_unitary(location)
+    Stmt_barrier(Location loc, AP_list* args)
+      : Unitary(loc, ast_nodes::stmt_barrier)
       , args_(args)
     {}
 
-    ast_node_kinds do_get_kind() const override
-	{
-      return ast_node_kinds::stmt_barrier;
-	}
+  public:
+    static Stmt_barrier* create(Location loc, AP_list* args) {
+      return new Stmt_barrier(loc, args);
+    }
+
+    AP_list* get_args() const {
+      return args_.get();
+    }
+
   };
 
 
   /*! \brief Single-qubit unitary */
-  class stmt_u : public stmt_unitary {
-  public:
-    stmt_u* create(ast_context* ctx, uint32_t location,
-                   expr* theta, expr* phi, expr* lambda, expr_var* arg)
-    {
-      return new (*ctx) stmt_u(location, theta, phi, lambda, arg);
-    }
+  class Stmt_unitary final : public Unitary {
+  private:
+    std::unique_ptr<Expr> theta_;
+    std::unique_ptr<Expr> phi_;
+    std::unique_ptr<Expr> lambda_;
+    std::unique_ptr<Expr_AP> arg_;
 
-    expr& theta const
-    {
-      return *(theta_);
-    }
-
-    expr& phi const
-    {
-      return *(phi_);
-    }
-
-    expr& lambda const
-    {
-      return *(lambda_);
-    }
-
-    expr_var& arg const
-    {
-      return *(arg_);
-    }
-
-  protected:
-    expr* theta_;
-    expr* phi_;
-    expr* lambda_;
-    expr_var* arg_;
-    
-    stmt_u(uint32_t location, expr* theta, expr* phi, expr* lambda, expr_var* arg)
-      : stmt_unitary(location)
+    Stmt_unitary(Location loc, Expr* theta, Expr* phi, Expr* lambda, Expr_AP* arg)
+      : Unitary(loc, ast_nodes::stmt_unitary)
       , theta_(theta)
       , phi_(phi)
       , lambda_(lambda)
       , arg_(arg)
     {}
 
-    ast_node_kinds do_get_kind() const override
-	{
-      return ast_node_kinds::stmt_unitary;
-	}
+  public:
+    static Stmt_unitary* create(Location loc, Expr* theta, Expr* phi, Expr* lambda, Expr_AP* arg)
+    {
+      return new Stmt_unitary(loc, theta, phi, lambda, arg);
+    }
+
+    Expr* get_theta() const {
+      return theta_.get();
+    }
+
+    void set_theta(Expr* theta) {
+      theta_.reset(theta);
+    }
+
+    Expr* get_phi() const {
+      return phi_.get();
+    }
+
+    void set_phi(Expr* phi) {
+      phi_.reset(phi);
+    }
+
+    Expr* get_lambda() const {
+      return lambda_.get();
+    }
+
+    void set_lambda(Expr* lambda) {
+      lambda_.reset(lambda);
+    }
+
+    Expr_AP* get_arg() const {
+      return arg_.get();
+    }
+
+    void set_arg(Expr_AP* arg) {
+      arg_.reset(arg);
+    }
+
   };
 
 
   /*! \brief CNOT gate */
-  class stmt_cnot : public stmt_unitary {
-  public:
-    stmt_cnot* create(ast_context* ctx, uint32_t location,
-                   expr_var* ctrl, expr_var* tgt)
-    {
-      return new (*ctx) stmt_cnot(location, ctrl, tgt);
-    }
+  class Stmt_cnot final : public Unitary {
+  private:
+    std::unique_ptr<Expr_AP> control_;
+    std::unique_ptr<Expr_AP> target_;
 
-    expr_var& control const
-    {
-      return *(ctrl_);
-    }
-
-    expr_var& target const
-    {
-      return *(tgt_);
-    }
-
-  protected:
-    expr_var* ctrl_;
-    expr_var* tgt_;
-    
-    stmt_cnot(uint32_t location, expr_var* ctrl, expr_var* tgt)
-      : stmt_unitary(location)
-      , ctrl_(ctrl)
-      , tgt_(tgt)
+    Stmt_cnot(Location loc, Expr_AP* control, Expr_AP* target)
+      : Unitary(loc, ast_nodes::stmt_cnot)
+      , control_(control)
+      , target_(target)
     {}
+    
+  public:
+    static Stmt_cnot* create(Location loc, Expr_AP* control, Expr_AP* target) {
+      return new Stmt_cnot(loc, control, target);
+    }
 
-    ast_node_kinds do_get_kind() const override
-	{
-      return ast_node_kinds::stmt_cnot;
-	}
+    Expr_AP* get_control() const {
+      return control_.get();
+    }
+
+    void set_control(Expr_AP* control) {
+      control_.reset(control);
+    }
+
+    Expr_AP* get_target() const {
+      return target_.get();
+    }
+
+    void set_target(Expr_AP* target) {
+      target_.reset(target);
+    }
+
   };
 
 
   /*! \brief Defined gate */
-  class stmt_gate : public stmt_unitary {
-  public:
-    stmt_gate* create(ast_context* ctx, uint32_t location, vector<expr*>& cargs, vector<expr_var*>& qargs)
-    {
-      return new (*ctx) stmt_gate(location, cargs, qargs);
-    }
+  class Stmt_gate final : public Unitary {
+  private:
+    std::string_view name_;
+    std::unique_ptr<Expr_list> cargs_;
+    std::unique_ptr<AP_list> qargs_;
 
-    vector<expr*>& cargs const
-    {
-      return cargs_;
-    }
-
-    vector<expr_var*>& qargs const
-    {
-      return qargs_;
-    }
-
-  protected:
-    vector<expr*> cargs_;
-    vector<expr_var*> qargs;
-    
-    stmt_gate(uint32_t location, vector<expr*>& cargs, vector<expr_var*>& qargs)
-      : stmt_unitary(location)
+    Stmt_gate(Location loc, std::string_view name, Expr_list* cargs, AP_list* qargs)
+      : Unitary(loc, ast_nodes::stmt_gate)
+      , name_(name)
       , cargs_(cargs)
       , qargs_(qargs)
     {}
 
-    ast_node_kinds do_get_kind() const override
-	{
-      return ast_node_kinds::stmt_gate;
-	}
+  public:
+    static Stmt_gate* create(Location loc, std::string_view name, Expr_list* cargs, AP_list* qargs) {
+      return new Stmt_gate(loc, name, cargs, qargs);
+    }
+
+    std::string_view gate_name() const {
+      return name_;
+    }
+
+    Expr_list* get_cargs() const {
+      return cargs_.get();
+    }
+
+    AP_list* get_qargs() const {
+      return qargs_.get();
+    }
+    
   };
 
-} // namespace qasm
-} // namespace tweedledee
+  using Stmt_list = utils::unique_list<Stmt>;
+  using Unitary_list = utils::unique_list<Unitary>;
+
+}
+}
