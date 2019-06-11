@@ -26,7 +26,9 @@ namespace ast {
 
     uint32_t linenum() const { return linenum_; }
   };
-    
+
+  // Forward declaration
+  class Visitor;
 
   /*! \brief Base AST node class */
   class AST_node {
@@ -46,6 +48,8 @@ namespace ast {
 
     //virtual ~AST_node() = 0;
     ~AST_node() { std::cout << "Destroying node #" << uid_ << std::endl; }
+
+    virtual void accept(Visitor& visitor) = 0;
 
     uint32_t uid() const { return uid_; }
     ast_nodes kind() const { return kind_; }

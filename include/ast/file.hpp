@@ -5,39 +5,62 @@
 *------------------------------------------------------------------------------------------------*/
 #pragma once
 
-#include "../ast_context.hpp"
-#include "../ast_node.hpp"
-#include "../ast_node_kinds.hpp"
+#include "ast/kinds.hpp"
+#include "ast/ast_node.hpp"
+#include "ast/decl.hpp"
+
+#include "ast/visitor.hpp"
 
 #include <memory>
 #include <string>
 
-namespace tweedledee {
-namespace qasm {
+namespace synthewareQ {
+namespace ast {
 
   /*! \brief Holds information about an individual source unit
    *
    *  To keep preprocessor inclusion semantics, all definitions
    *  in a file are automatically promoted to the global scope
    */
-  class source_unit : public ast_node {
-  public:
-    source_unit(uint32_t loc, std::string_view filename, vector<stmt*>& body, bool output)
-      : ast_node(loc)
+  class Translation_unit : public AST_node {
+  private:
+    std::string_view filename_;
+    bool writeout_;
+    std::unique_ptr<Stmt_list> body_;
+    
+    Translation_unit(Location loc, std::string_view filename, Stmt_list* body, bool writeout)
+      : AST_node(loc, ast_nodes::trans_unit)
       , filename_(filename)
       , body_(body)
-      , output_(output)
+      , writeout_(writeout)
     {}
 
-    std::string_view filename;
-    bool output;
-    vector<stmt*> body;
+  public:
 
-  protected:
-	ast_node_kinds get_kind() const override
-	{
-      return ast_node_kinds::source_unit;
-	}
+    Translation_unit* create(Location loc, std::string_view filename, Stmt_list* body, bool writeout = false) {
+      return new Translation_unit(loc, filename, body, writeout);
+    }
+
+    std::string_view filename() {
+      return filename_;
+    }
+
+    Stmt_list* get_body() {
+      return body_.get();
+    }
+
+    bool do_write() {
+      return writeout_;
+    }
+
+    void set_write(bool writeout) {
+      writeout_ = writeout;
+    }
+
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
+
   };
 
 }

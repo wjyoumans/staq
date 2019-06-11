@@ -8,6 +8,8 @@
 #include "ast/kinds.hpp"
 #include "ast/ast_node.hpp"
 
+#include "ast/visitor.hpp"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -67,7 +69,10 @@ namespace ast {
     void resize(uint32_t size) {
       size_ = size;
     }
-      
+
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
 
   };
 
@@ -82,6 +87,10 @@ namespace ast {
   public:
     static Type_qubit* create(Location loc) { return new Type_qubit(loc); }
     
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
+
   };
 
   class Type_cbit : public Type {
@@ -93,6 +102,10 @@ namespace ast {
   public:
     static Type_cbit* create(Location loc) { return new Type_cbit(loc); }
     
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
+
   };
 
 }

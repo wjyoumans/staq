@@ -1,4 +1,4 @@
-#include "ast/decl.hpp"
+#include "ast/ast.hpp"
 
 using namespace synthewareQ;
 

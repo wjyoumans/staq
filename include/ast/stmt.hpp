@@ -11,6 +11,8 @@
 #include "ast/ast_node.hpp"
 #include "ast/expr.hpp"
 
+#include "ast/visitor.hpp"
+
 #include <memory>
 #include <string>
 
@@ -64,6 +66,10 @@ namespace ast {
     void set_then(Stmt* then) {
       then_.reset(then);
     }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
 
   };
 
@@ -100,6 +106,11 @@ namespace ast {
     void set_dest(Expr_AP* dest) {
       dest_.reset(dest);
     }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
+
   };
 
 
@@ -125,6 +136,10 @@ namespace ast {
     void set_arg(Expr_AP* arg) {
       arg_.reset(arg);
     }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
 
   };
 
@@ -149,6 +164,10 @@ namespace ast {
 
     void set_decl(Decl* decl) {
       decl_.reset(decl);
+    }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
     }
 
   };
@@ -183,6 +202,10 @@ namespace ast {
 
     AP_list* get_args() const {
       return args_.get();
+    }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
     }
 
   };
@@ -241,6 +264,10 @@ namespace ast {
     void set_arg(Expr_AP* arg) {
       arg_.reset(arg);
     }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
 
   };
 
@@ -277,6 +304,10 @@ namespace ast {
     void set_target(Expr_AP* target) {
       target_.reset(target);
     }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
 
   };
 
@@ -310,6 +341,10 @@ namespace ast {
 
     AP_list* get_qargs() const {
       return qargs_.get();
+    }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
     }
     
   };

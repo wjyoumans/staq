@@ -11,6 +11,8 @@
 #include "ast/ast_node.hpp"
 #include "ast/types.hpp"
 
+#include "ast/visitor.hpp"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -96,6 +98,10 @@ namespace ast {
     void set_right(Expr* right) {
       right_.reset(right);
     }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
 
   };
 
@@ -132,6 +138,10 @@ namespace ast {
     void set_subexpr(Expr* subexpr) {
       subexpr_.reset(subexpr);
     }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
 
   };
 
@@ -150,6 +160,10 @@ namespace ast {
 
     double numeric_value() const {
       return M_PI;
+    }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
     }
 
   };
@@ -172,6 +186,10 @@ namespace ast {
     int32_t numeric_value() const {
       return value_;
     }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
 
   };
 
@@ -192,6 +210,10 @@ namespace ast {
 
     double numeric_value() const {
       return value_;
+    }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
     }
 
   };
@@ -241,6 +263,10 @@ namespace ast {
     void set_type(Type* type) {
       type_.reset(type);
     }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
 
   };
 
@@ -285,6 +311,10 @@ namespace ast {
     void set_offset(uint32_t offset)
     {
       offset_ = offset;
+    }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
     }
 
   };

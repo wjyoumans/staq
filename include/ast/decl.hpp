@@ -12,6 +12,8 @@
 #include "ast/types.hpp"
 #include "ast/stmt.hpp"
 
+#include "ast/visitor.hpp"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -79,6 +81,10 @@ namespace ast {
 
     bool is_dirty() const {
       return qualifiers_.find(qualifier::dirty) != qualifiers_.end();
+    }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
     }
 
   };
@@ -154,6 +160,10 @@ namespace ast {
     Unitary_list* get_body() const {
       return body_.get();
     }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
 
   };
 
@@ -173,6 +183,11 @@ namespace ast {
     {
       return new Decl_opaque(loc, identifier, params, formals);
     }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
+    }
+
   };
 
 
@@ -197,6 +212,10 @@ namespace ast {
 
     std::string_view filename() const {
       return filename_;
+    }
+    
+    void accept(Visitor& visitor) {
+      visitor.visit(this);
     }
 
   };
