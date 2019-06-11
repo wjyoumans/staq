@@ -176,6 +176,7 @@ namespace ast {
 
     Expr_int(Location loc, int32_t value)
       : Expr(loc, ast_nodes::expr_int)
+      , value_(value)
     {}
 
   public:
@@ -201,6 +202,7 @@ namespace ast {
 
     Expr_real(Location loc, double value)
       : Expr(loc, ast_nodes::expr_real)
+      , value_(value)
     {}
 
   public:

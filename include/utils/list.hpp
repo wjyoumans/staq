@@ -31,7 +31,7 @@ namespace utils {
 
     uint32_t size() { return list_.size(); }
 
-    class iterator : list_t::iterator {
+    class iterator : public list_t::iterator {
     friend class Ulist;
     private:
       using internal_t = typename list_t::iterator;
@@ -44,7 +44,7 @@ namespace utils {
       
       iterator(const internal_t &it) : internal_t(it) {}
 
-      const_reference operator*() const {
+      reference operator*() const {
         return *(this->internal_t::operator*());
       }
 
@@ -64,11 +64,11 @@ namespace utils {
       }
     };
       
-    iterator begin() const {
+    iterator begin() {
       return iterator(list_.begin());
     }
 
-    iterator end() const {
+    iterator end() {
       return iterator(list_.end());
     }
 
