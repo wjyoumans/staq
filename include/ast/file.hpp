@@ -5,6 +5,8 @@
 *------------------------------------------------------------------------------------------------*/
 #pragma once
 
+#include "utils/list.hpp"
+
 #include "ast/kinds.hpp"
 #include "ast/ast_node.hpp"
 #include "ast/decl.hpp"
@@ -63,5 +65,6 @@ namespace ast {
 
   };
 
+  using File_list = utils::unique_list<Translation_unit>;
 }
 }

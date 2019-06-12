@@ -12,20 +12,38 @@
 #include <vector>
 
 #include <iostream>
+#include <sstream>
 
 namespace synthewareQ {
 namespace ast {
 
-  // TEMPORARY
-  class Location {
+  /*! \brief Minimal location information for debugging */
+  class Location_minimal {
   private:
-    const uint32_t linenum_;
+    const uint32_t line_;
+    const uint32_t col_;
+    const std::string file_;
 
   public:
-    Location(uint32_t linenum) : linenum_(linenum) {}
+    Location(std::string_view filename, uint32_t line, uint32_t column)
+      : filename_(filename)
+      , line_(line)
+      , col_(column)
+    {}
 
-    uint32_t linenum() const { return linenum_; }
+    std::string_view filename const { return file_; }
+    uint32_t linenum() const { return line_; }
+    uint32_t column() const { return col_; }
+
+	std::string str() const
+	{
+		std::stringstream ss;
+		ss << "<" << file_ << ":" << line_ << ":" << col_ << ">";
+		return ss.str();
+	}
   };
+
+  typedef Location = uint32_t;
 
   // Forward declaration
   class Visitor;

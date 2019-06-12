@@ -69,6 +69,10 @@ public:
 		   << location_map_.lower_bound(location)->second->column(location) << ">";
 		return ss.str();
 	}
+
+  std::string containing_file(const uint32_t location) const {
+    return location_map_.lower_bound(location)->second->name();
+  }
 };
 
 } // namespace synthewareQ

@@ -1,6 +1,8 @@
 #include "ast/ast.hpp"
 #include "ast/visitors/generic.hpp"
 
+#include "parser/lexer.hpp"
+
 #include <iostream>
 
 using namespace std;
