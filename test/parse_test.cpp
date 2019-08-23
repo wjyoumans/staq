@@ -5,22 +5,20 @@
 
 #include "parser/position.h"
 #include "ast/ast.h"
+#include "parser/parser.h"
 
 using namespace synthewareQ::parser;
 using namespace synthewareQ::ast;
 
 int main(int argc, char** argv) {
 
-  /*
   if (argc < 2) {
     std::cerr << "Input file not specified.\n";
     return -1;
   }
 
-  Preprocessor pp;
-  pp.add_target_file(argv[1]);
-  pp.print_all_tokens();
-  */
+  auto prog = parse_file(argv[1]);
+  std::cout << *prog;
 
   Position pos;
 

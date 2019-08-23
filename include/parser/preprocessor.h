@@ -82,6 +82,8 @@ static const std::string std_include =
     std::vector<LexerPtr> lexer_stack_{}; ///< owning stack of lexers
     LexerPtr current_lexer_ = nullptr;    ///< current lexer
 
+    bool std_include_ = false;            ///< whether qelib1 has been included
+
   public:
     /**
      * \brief Default constructor
@@ -171,6 +173,8 @@ static const std::string std_include =
       }
     }
 
+    bool includes_stdlib() { return std_include_; }
+
   private:
     /**
      * \brief Handles include statements
@@ -187,6 +191,8 @@ static const std::string std_include =
       }
 
       auto target = token.as_string();
+      if (target == "qelib1.inc") std_include_ = true;
+
       token = current_lexer_->next_token();
       if (token.is_not(Token::Kind::semicolon)) {
         std::cerr << "Warning: Missing a ';'\n";
