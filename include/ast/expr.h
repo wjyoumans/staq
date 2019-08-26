@@ -74,6 +74,16 @@ namespace ast {
     Expr(parser::Position pos) : ASTNode(pos) {}
     virtual ~Expr() = default;
     virtual Expr* clone() const = 0;
+
+    /**
+     * \brief Internal pretty-printer with associative context 
+     *
+     * \param ctx Whether the current associative context is ambiguous
+     */
+    virtual std::ostream& pretty_print(std::ostream& os, bool ctx) const = 0;
+    std::ostream& pretty_print(std::ostream& os) const override {
+      return pretty_print(os, false);
+    }
   };
 
   /**
@@ -101,8 +111,19 @@ namespace ast {
     void set_rexp(ptr<Expr> exp) { rexp_ = std::move(exp); }
 
     void accept(Visitor& visitor) override { visitor.visit(this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
-      os << "(" << *lexp_ << op_ << *rexp_ << ")";
+    std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
+      if (ctx) {
+        os << "(";
+        lexp_->pretty_print(os, true);
+        os << op_;
+        rexp_->pretty_print(os, true);
+        os << ")";
+      } else {
+        lexp_->pretty_print(os, true);
+        os << op_;
+        rexp_->pretty_print(os, true);
+      }
+
       return os;
     }
     BExpr* clone() const override {
@@ -133,8 +154,18 @@ namespace ast {
     void set_exp(ptr<Expr> exp) { exp_ = std::move(exp); }
     
     void accept(Visitor& visitor) override { visitor.visit(this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
-      os << op_ << "(" << *exp_ << ")";
+    std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
+      (void)ctx;
+      
+      os << op_;
+      if (op_ == UnaryOp::Neg)
+        exp_->pretty_print(os, true);
+      else {
+        os << "(";
+        exp_->pretty_print(os, false);
+        os << ")";
+      }
+
       return os;
     }
     UExpr* clone() const override {
@@ -149,11 +180,14 @@ namespace ast {
    * \see synthewareQ::ast::Expr
    */
   class PiExpr final : public Expr {
+    
   public:
     PiExpr(parser::Position pos) : Expr(pos) {}
 
     void accept(Visitor& visitor) override { visitor.visit(this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
+      (void)ctx;
+      
       os << "pi";
       return os;
     }
@@ -177,7 +211,9 @@ namespace ast {
     int value() const { return value_; }
     
     void accept(Visitor& visitor) override { visitor.visit(this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
+      (void)ctx;
+      
       os << value_;
       return os;
     }
@@ -201,7 +237,9 @@ namespace ast {
     double value() const { return value_; }
     
     void accept(Visitor& visitor) override { visitor.visit(this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
+      (void)ctx;
+      
       os << value_;
       return os;
     }
@@ -230,7 +268,9 @@ namespace ast {
     std::optional<int> offset() const { return offset_; }
 
     void accept(Visitor& visitor) override { visitor.visit(this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
+      (void)ctx;
+      
       os << var_;
       if (offset_) os << "[" << *offset_ << "]";
       return os;

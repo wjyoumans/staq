@@ -284,6 +284,33 @@ namespace parser {
     }
 
     /**
+     * \brief Parse an ancilla declaration
+     * \note <ancdecl>
+     *
+     * <ancdecl> = ancilla <id> [ <nninteger> ] ;
+     *           | dirty ancilla <id> [ <nninteger> ] ;
+     *
+     * \return Unique pointer to a (gate) statement object
+     */
+    std::unique_ptr<ast::Gate> parse_ancilla_decl() {
+      bool dirty = false;
+      auto pos = current_token_.position();
+
+      if (try_and_consume_token(Token::Kind::kw_dirty)) {
+        dirty = true;
+      }
+
+      expect_and_consume_token(Token::Kind::kw_ancilla);
+      auto id = expect_and_consume_token(Token::Kind::identifier);
+      expect_and_consume_token(Token::Kind::l_square);
+      auto size = expect_and_consume_token(Token::Kind::nninteger);
+      expect_and_consume_token(Token::Kind::r_square);
+      consume_until(Token::Kind::semicolon);
+
+      return std::make_unique<ast::AncillaDecl>(ast::AncillaDecl(pos, id.as_string(), dirty, size.as_int()));
+    }
+
+    /**
      * \brief Parse a gate declaration
      * \note <gatedecl>
      *
@@ -383,6 +410,8 @@ namespace parser {
 
       while (!finished) {
         switch (current_token_.kind()) {
+        case Token::Kind::kw_dirty:
+        case Token::Kind::kw_ancilla:
         case Token::Kind::kw_cx:
         case Token::Kind::kw_u:
         case Token::Kind::identifier:
@@ -451,6 +480,10 @@ namespace parser {
      */
     std::unique_ptr<ast::Gate> parse_gop() {
       switch (current_token_.kind()) {
+      case Token::Kind::kw_dirty:
+      case Token::Kind::kw_ancilla:
+        return parse_ancilla_decl();
+        
       case Token::Kind::kw_u:
         return parse_unitary();
 
