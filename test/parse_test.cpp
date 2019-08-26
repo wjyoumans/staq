@@ -6,6 +6,7 @@
 #include "parser/position.h"
 #include "ast/ast.h"
 #include "parser/parser.h"
+#include "tools/ast_printer.h"
 
 using namespace synthewareQ::parser;
 using namespace synthewareQ::ast;
@@ -20,18 +21,8 @@ int main(int argc, char** argv) {
   auto prog = parse_file(argv[1]);
   std::cout << *prog;
 
-  Position pos;
+  std::cout << "AST\n";
+  synthewareQ::tools::print_tree(*prog);
 
-  // AST
-  auto exp1 = std::make_unique<BExpr>(BExpr(pos, 
-                        ptr<Expr>(new IntExpr(pos, 2)),
-                        BinaryOp::Plus,
-                        ptr<Expr>(new VarExpr(pos, "x"))));
-  auto exp2 = new BExpr(pos,
-                        std::move(exp1),
-                        BinaryOp::Plus,
-                        ptr<Expr>(new PiExpr(pos)));
-
-  std::cout << *exp2 << "\n";
   return 1;
 }

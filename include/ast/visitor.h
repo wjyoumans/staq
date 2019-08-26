@@ -60,28 +60,28 @@ namespace ast {
   class Visitor {
   public:
     // Expressions
-    virtual void visit(BExpr*) = 0;
-    virtual void visit(UExpr*) = 0;
-    virtual void visit(PiExpr*) = 0;
-    virtual void visit(IntExpr*) = 0;
-    virtual void visit(RealExpr*) = 0;
-    virtual void visit(VarExpr*) = 0;
+    virtual void visit(BExpr&) = 0;
+    virtual void visit(UExpr&) = 0;
+    virtual void visit(PiExpr&) = 0;
+    virtual void visit(IntExpr&) = 0;
+    virtual void visit(RealExpr&) = 0;
+    virtual void visit(VarExpr&) = 0;
     // Statements
-    virtual void visit(MeasureStmt*) = 0;
-    virtual void visit(ResetStmt*) = 0;
-    virtual void visit(IfStmt*) = 0;
+    virtual void visit(MeasureStmt&) = 0;
+    virtual void visit(ResetStmt&) = 0;
+    virtual void visit(IfStmt&) = 0;
     // Gates
-    virtual void visit(UGate*) = 0;
-    virtual void visit(CNOTGate*) = 0;
-    virtual void visit(BarrierGate*) = 0;
-    virtual void visit(DeclaredGate*) = 0;
+    virtual void visit(UGate&) = 0;
+    virtual void visit(CNOTGate&) = 0;
+    virtual void visit(BarrierGate&) = 0;
+    virtual void visit(DeclaredGate&) = 0;
     // Declarations
-    virtual void visit(GateDecl*) = 0;
-    virtual void visit(OracleDecl*) = 0;
-    virtual void visit(RegisterDecl*) = 0;
-    virtual void visit(AncillaDecl*) = 0;
+    virtual void visit(GateDecl&) = 0;
+    virtual void visit(OracleDecl&) = 0;
+    virtual void visit(RegisterDecl&) = 0;
+    virtual void visit(AncillaDecl&) = 0;
     // Program
-    virtual void visit(Program*) = 0;
+    virtual void visit(Program&) = 0;
   };
 
 }

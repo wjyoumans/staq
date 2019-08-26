@@ -83,13 +83,14 @@ namespace ast {
       , body_(std::move(body))
     {}
 
+    bool is_opaque() { return opaque_; }
     std::vector<symbol>& c_params() { return c_params_; }
     std::vector<symbol>& q_params() { return q_params_; }
     void foreach_stmt(std::function<void(Gate&)> f) {
       for (auto it = body_.begin(); it != body_.end(); it++) f(**it);
     }
 
-    void accept(Visitor& visitor) override { visitor.visit(this); }
+    void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os) const override {
       os << (opaque_ ? "opaque " : "gate ") << id_;
       if (c_params_.size() > 0) {
@@ -141,7 +142,7 @@ namespace ast {
     std::vector<symbol>& params() { return params_; }
     const symbol& fname() { return fname_; }
 
-    void accept(Visitor& visitor) override { visitor.visit(this); }
+    void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os) const override {
       os << "oracle " << id_ << " ";
       for (auto it = params_.begin(); it != params_.end(); it++) {
@@ -178,7 +179,7 @@ namespace ast {
     bool is_quantum() { return quantum_; }
     int size() { return size_; }
 
-    void accept(Visitor& visitor) override { visitor.visit(this); }
+    void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os) const override {
       os << (quantum_ ? "qreg " : "creg ") << id_ << "[" << size_ << "];";
       return os;
@@ -212,7 +213,7 @@ namespace ast {
     bool is_dirty() { return dirty_; }
     int size() { return size_; }
 
-    void accept(Visitor& visitor) override { visitor.visit(this); }
+    void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os) const override {
       if (dirty_) os << "dirty ";
       os << "ancilla " << id_ << "[" << size_ << "];";

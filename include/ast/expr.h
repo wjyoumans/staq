@@ -110,7 +110,7 @@ namespace ast {
     void set_lexp(ptr<Expr> exp) { lexp_ = std::move(exp); }
     void set_rexp(ptr<Expr> exp) { rexp_ = std::move(exp); }
 
-    void accept(Visitor& visitor) override { visitor.visit(this); }
+    void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
       if (ctx) {
         os << "(";
@@ -153,7 +153,7 @@ namespace ast {
     Expr& exp() { return *exp_; }
     void set_exp(ptr<Expr> exp) { exp_ = std::move(exp); }
     
-    void accept(Visitor& visitor) override { visitor.visit(this); }
+    void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
       (void)ctx;
       
@@ -184,7 +184,7 @@ namespace ast {
   public:
     PiExpr(parser::Position pos) : Expr(pos) {}
 
-    void accept(Visitor& visitor) override { visitor.visit(this); }
+    void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
       (void)ctx;
       
@@ -210,7 +210,7 @@ namespace ast {
 
     int value() const { return value_; }
     
-    void accept(Visitor& visitor) override { visitor.visit(this); }
+    void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
       (void)ctx;
       
@@ -236,7 +236,7 @@ namespace ast {
 
     double value() const { return value_; }
     
-    void accept(Visitor& visitor) override { visitor.visit(this); }
+    void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
       (void)ctx;
       
@@ -267,7 +267,7 @@ namespace ast {
     const symbol& var() const { return var_; }
     std::optional<int> offset() const { return offset_; }
 
-    void accept(Visitor& visitor) override { visitor.visit(this); }
+    void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
       (void)ctx;
       
