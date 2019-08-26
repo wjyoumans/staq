@@ -43,6 +43,16 @@ namespace ast {
     Stmt(parser::Position pos) : ASTNode(pos) {}
     virtual ~Stmt() = default;
     virtual Stmt* clone() const = 0;
+
+    /**
+     * \brief Internal pretty-printer which can suppress the output of the stdlib
+     *
+     * \param ctx Whether the current associative context is ambiguous
+     */
+    virtual std::ostream& pretty_print(std::ostream& os, bool suppress_std) const = 0;
+    std::ostream& pretty_print(std::ostream& os) const override {
+      return pretty_print(os, false);
+    }
   };
 
   /**
@@ -67,7 +77,7 @@ namespace ast {
     void set_c_arg(ptr<VarExpr> c_arg) { c_arg_ = std::move(c_arg); }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool) const override {
       os << "measure " << *q_arg_ << " -> " << *c_arg_ << ";\n";
       return os;
     }
@@ -91,7 +101,7 @@ namespace ast {
     void set_arg(ptr<VarExpr> arg) { arg_ = std::move(arg); }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool) const override {
       os << "reset " << *arg_ << ";\n";
       return os;
     }
@@ -123,7 +133,7 @@ namespace ast {
     Stmt& then() { return *then_; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool) const override {
       os << "if (" << var_ << "==" << cond_ << ") " << *then_;
       return os;
     }
@@ -170,8 +180,8 @@ namespace ast {
     VarExpr& arg() { return *arg_; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
-      os << "U(" << *theta_ << "," << *phi_ << "," << *lambda_ << ") " << *arg_ << ";";
+    std::ostream& pretty_print(std::ostream& os, bool) const override {
+      os << "U(" << *theta_ << "," << *phi_ << "," << *lambda_ << ") " << *arg_ << ";\n";
       return os;
     }
     UGate* clone() const override {
@@ -203,8 +213,8 @@ namespace ast {
     VarExpr& tgt() { return *tgt_; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
-      os << "CX " << *ctrl_ << *tgt_ << ";";
+    std::ostream& pretty_print(std::ostream& os, bool) const override {
+      os << "CX " << *ctrl_ << *tgt_ << ";\n";
       return os;
     }
     CNOTGate* clone() const override {
@@ -233,12 +243,12 @@ namespace ast {
     }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool) const override {
       os << "barrier ";
       for (auto it = args_.begin(); it != args_.end(); it++) {
         os << (it == args_.begin() ? "" : ",") << **it;
       }
-      os << ";";
+      os << ";\n";
       return os;
     }
     BarrierGate* clone() const override {
@@ -285,7 +295,7 @@ namespace ast {
     }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool) const override {
       os << name_;
       if (c_args_.size() > 0) {
         os << "(";
@@ -298,7 +308,7 @@ namespace ast {
       for (auto it = q_args_.begin(); it != q_args_.end(); it++) {
         os << (it == q_args_.begin() ? "" : ",") << **it;
       }
-      os << ";";
+      os << ";\n";
       return os;
     }
     DeclaredGate* clone() const override {

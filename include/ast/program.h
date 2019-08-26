@@ -53,10 +53,10 @@ namespace ast {
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os) const override {
       os << "OPENQASM 2.0;\n";
-      //if (std_include_) os << "include \"qelib1.inc\";\n";
+      if (std_include_) os << "include \"qelib1.inc\";\n";
       os << "\n";
       for (auto it = body_.begin(); it != body_.end(); it++) {
-        os << **it << "\n";
+        (*it)->pretty_print(os, std_include_);
       }
     }
     Program* clone() const override {

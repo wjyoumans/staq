@@ -30,6 +30,8 @@
 
 #include "visitor.h"
 
+#include <set>
+
 namespace synthewareQ {
 namespace ast {
 

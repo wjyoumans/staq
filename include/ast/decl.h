@@ -33,6 +33,13 @@
 namespace synthewareQ {
 namespace ast {
 
+  static const std::set<std::string_view> qelib_defs {
+    "u3", "u2", "u1", "cx", "id", "u0", "x", "y", "z",
+    "h", "s", "sdg", "t", "tdg", "rx", "ry", "rz",
+    "cz", "cy", "swap", "ch", "ccx", "crz", "cu1",
+    "cu3"
+  };
+
   /**
    * \class synthewareQ::ast::Decl
    * \brief Base class for openQASM declarations
@@ -91,7 +98,10 @@ namespace ast {
     }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool suppress_std) const override {
+      if (suppress_std && qelib_defs.find(id_) != qelib_defs.end())
+        return os;
+      
       os << (opaque_ ? "opaque " : "gate ") << id_;
       if (c_params_.size() > 0) {
         os << "(";
@@ -109,9 +119,9 @@ namespace ast {
       } else {
         os << " {\n";
         for (auto it = body_.begin(); it != body_.end(); it++) {
-          os << "\t" << **it << "\n";
+          os << "\t" << **it;
         }
-        os << "}";
+        os << "}\n";
       }
     }
     GateDecl* clone() const override {
@@ -143,12 +153,12 @@ namespace ast {
     const symbol& fname() { return fname_; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool) const override {
       os << "oracle " << id_ << " ";
       for (auto it = params_.begin(); it != params_.end(); it++) {
         os << (it == params_.begin() ? "" : ",") << *it;
       }
-      os << " { \"" << fname_ << "\" }";
+      os << " { \"" << fname_ << "\" }\n";
     }
     OracleDecl* clone() const override {
       return new OracleDecl(pos_, id_, params_, fname_);
@@ -180,8 +190,8 @@ namespace ast {
     int size() { return size_; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
-      os << (quantum_ ? "qreg " : "creg ") << id_ << "[" << size_ << "];";
+    std::ostream& pretty_print(std::ostream& os, bool) const override {
+      os << (quantum_ ? "qreg " : "creg ") << id_ << "[" << size_ << "];\n";
       return os;
     }
     RegisterDecl* clone() const override {
@@ -214,9 +224,9 @@ namespace ast {
     int size() { return size_; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
-    std::ostream& pretty_print(std::ostream& os) const override {
+    std::ostream& pretty_print(std::ostream& os, bool) const override {
       if (dirty_) os << "dirty ";
-      os << "ancilla " << id_ << "[" << size_ << "];";
+      os << "ancilla " << id_ << "[" << size_ << "];\n";
       return os;
     }
     AncillaDecl* clone() const override {
