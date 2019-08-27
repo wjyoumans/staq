@@ -14,7 +14,7 @@
 #include <tweedledum/utils/angle.hpp>
 
 namespace synthewareQ {
-namespace channel_representation {
+namespace circuits {
   /*! \brief Utilities for the channel representation of Clifford + single qubit gates */
 
   namespace td = tweedledum;

@@ -15,12 +15,7 @@
 #include <sstream>
 
 namespace synthewareQ {
-  using namespace qasm;
-  using namespace channel_representation;
-
-  /* Helper for variant visitor */
-  template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-  template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+namespace optimization {
 
   /*! \brief Rotation gate merging algorithm based on arXiv:1903.12456 
    *
@@ -189,19 +184,6 @@ namespace synthewareQ {
 
     /* Phase two of the algorithm */
     td::angle fold(circuit_callback& circuit) {
-      // Debugging
-      /*
-      std::cout << "Channel circuit:\n  ";
-      for (auto& op : circuit) {
-        auto visitor = overloaded {
-          [](uninterp_op& Uop) { std::cout << Uop; },
-          [](clifford_op& Cop) { std::cout << Cop; },
-          [](std::pair<rotation_info, rotation_op>& Rop) { std::cout << Rop.second; }
-        };
-        std::visit(visitor, op);
-      }
-      */
-      
       auto phase = td::angles::zero;
 
       for (auto it = circuit.rbegin(); it != circuit.rend(); it++) {
@@ -234,7 +216,7 @@ namespace synthewareQ {
       bool cont = true;
 
       for (; cont && it != circuit.rend(); it++) {
-        auto visitor = overloaded {
+        auto visitor = utils::overloaded {
           [this, it, &R, &phase, &circuit](std::pair<rotation_info, rotation_op>& Rop) {
               auto res = R.try_merge(Rop.second);
               if (res.has_value()) {

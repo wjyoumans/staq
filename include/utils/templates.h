@@ -23,48 +23,18 @@
  */
 
 /**
- * \file ast/ast.h
- * \brief openQASM syntax trees
+ * \file ast/templates.h
+ * \brief Helper templates
  */
 #pragma once
 
-#include "visitor.h"
-#include <set>
-
 namespace synthewareQ {
-namespace ast {
-
-  using symbol = std::string;
-
-  template <typename T>
-  using ptr = std::unique_ptr<T>;
-
+namespace utils {
   /**
-   * \class synthewareQ::ast::ASTNode
-   * \brief Base class for AST nodes
+   * \brief Convenience template for variant visitors
    */
-  class ASTNode {
-    static int max_uid_;
-
-  protected:
-    const int uid_;
-    const parser::Position pos_;
-
-  public:
-    ASTNode(parser::Position pos) : uid_(++max_uid_), pos_(pos) { }
-    virtual ~ASTNode() = default;
-
-    int uid() const { return uid_; }
-
-    virtual void accept(Visitor& visitor) = 0;
-    virtual std::ostream& pretty_print(std::ostream& os) const = 0;
-    virtual ASTNode* clone() const = 0;
-  };
-  int ASTNode::max_uid_ = 0;
-
-  std::ostream& operator<<(std::ostream& os, const ASTNode& node) {
-    return node.pretty_print(os);
-  }
+  template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+  template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 }
 }
