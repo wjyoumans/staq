@@ -26,9 +26,8 @@
 
 namespace synthewareQ {
 namespace tools {
-  using namespace ast;
 
-  class ASTPrinter final : public Visitor {
+  class ASTPrinter final : public ast::Visitor {
     std::ostream& os_;
     std::string prefix_;
 
@@ -36,7 +35,7 @@ namespace tools {
     ASTPrinter(std::ostream& os) : os_(os), prefix_("") {}
 
     // Expressions
-    void visit(BExpr& expr) {
+    void visit(ast::BExpr& expr) {
       os_ << prefix_ << "|- BExpr(" << expr.op() << ")\n";
 
       prefix_ += "  ";
@@ -45,27 +44,27 @@ namespace tools {
       prefix_.resize(prefix_.length() - 2);
     }
 
-    void visit(UExpr& expr) {
+    void visit(ast::UExpr& expr) {
       os_ << prefix_ << "|- UExpr(" << expr.op() << ")\n";
 
       prefix_ += "  ";
-      expr.exp().accept(*this);
+      expr.subexp().accept(*this);
       prefix_.resize(prefix_.length() - 2);
     }
 
-    void visit(PiExpr&) {
+    void visit(ast::PiExpr&) {
       os_ << prefix_ << "|- Pi\n";
     }
 
-    void visit(IntExpr& expr) {
+    void visit(ast::IntExpr& expr) {
       os_ << prefix_ << "|- Int(" << expr.value() << ")\n";
     }
 
-    void visit(RealExpr& expr) {
+    void visit(ast::RealExpr& expr) {
       os_ << prefix_ << "|- Real(" << expr.value() << ")\n";
     }
 
-    void visit(VarExpr& expr) {
+    void visit(ast::VarExpr& expr) {
       os_ << prefix_ << "|- Var(" << expr.var();
       if (expr.offset())
         os_ << "[" << *expr.offset() << "]";
@@ -73,7 +72,7 @@ namespace tools {
     }
 
     // Statements
-    void visit(MeasureStmt& stmt) {
+    void visit(ast::MeasureStmt& stmt) {
       os_ << prefix_ << "|- Measure\n";
 
       prefix_ += "  ";
@@ -82,7 +81,7 @@ namespace tools {
       prefix_.resize(prefix_.length() - 2);
     }
 
-    void visit(ResetStmt& stmt) {
+    void visit(ast::ResetStmt& stmt) {
       os_ << prefix_ << "|- Reset\n";
 
       prefix_ += "  ";
@@ -90,7 +89,7 @@ namespace tools {
       prefix_.resize(prefix_.length() - 2);
     }
 
-    void visit(IfStmt& stmt) {
+    void visit(ast::IfStmt& stmt) {
       os_ << prefix_ << "|- If(" << stmt.var() << "==" << stmt.cond() << ")\n";
 
       prefix_ += "  ";
@@ -99,7 +98,7 @@ namespace tools {
     }
 
     // Gates
-    void visit(UGate& gate) {
+    void visit(ast::UGate& gate) {
       os_ << prefix_ << "|- UGate\n";
 
       prefix_ += "  ";
@@ -110,7 +109,7 @@ namespace tools {
       prefix_.resize(prefix_.length() - 2);
     }
 
-    void visit(CNOTGate& gate) {
+    void visit(ast::CNOTGate& gate) {
       os_ << prefix_ << "|- CXGate\n";
 
       prefix_ += "  ";
@@ -119,7 +118,7 @@ namespace tools {
       prefix_.resize(prefix_.length() - 2);
     }
 
-    void visit(BarrierGate& gate) {
+    void visit(ast::BarrierGate& gate) {
       os_ << prefix_ << "|- Barrier\n";
 
       prefix_ += "  ";
@@ -127,7 +126,7 @@ namespace tools {
       prefix_.resize(prefix_.length() - 2);
     }
 
-    void visit(DeclaredGate& gate) {
+    void visit(ast::DeclaredGate& gate) {
       os_ << prefix_ << "|- Declared(" << gate.name() << ")\n";
 
       prefix_ += "  ";
@@ -137,7 +136,7 @@ namespace tools {
     }
 
     // Declarations
-    void visit(GateDecl& decl) {
+    void visit(ast::GateDecl& decl) {
       os_ << prefix_ << "|- Gate Decl(" << decl.id() << "(";
       for (auto& param : decl.c_params())
         os_ << param << ",";
@@ -154,21 +153,21 @@ namespace tools {
       prefix_.resize(prefix_.length() - 2);
     }
 
-    void visit(OracleDecl& decl) {
+    void visit(ast::OracleDecl& decl) {
       os_ << prefix_ << "|- Oracle Decl(" << decl.id() << "[";
       for (auto& param : decl.params())
         os_ << param << ",";
       os_ << "] = " << decl.fname() << ")\n";
     }
 
-    void visit(RegisterDecl& decl) {
+    void visit(ast::RegisterDecl& decl) {
       os_ << prefix_ << "|- Register Decl(" << decl.id() << "[" << decl.size() << "]";
       if (decl.is_quantum())
         os_ << ", quantum";
       os_ << ")\n";
     }
 
-    void visit(AncillaDecl& decl) {
+    void visit(ast::AncillaDecl& decl) {
       os_ << prefix_ << "|- Ancilla Decl(" << decl.id() << "[" << decl.size() << "]";
       if (decl.is_dirty())
         os_ << ", dirty";
@@ -176,7 +175,7 @@ namespace tools {
     }
     
     // Program
-    void visit(Program& prog) {
+    void visit(ast::Program& prog) {
       os_ << prefix_ << "|- Program\n";
 
       prefix_ += "  ";
@@ -185,7 +184,7 @@ namespace tools {
     }
   };
 
-  void print_tree(ASTNode& node, std::ostream& os = std::cout) {
+  void print_tree(ast::ASTNode& node, std::ostream& os = std::cout) {
     ASTPrinter printer(os);
     node.accept(printer);
   }

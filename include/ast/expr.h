@@ -30,6 +30,8 @@
 
 #include "base.h"
 
+#include <cmath>
+
 namespace synthewareQ {
 namespace ast {
 
@@ -76,6 +78,14 @@ namespace ast {
     virtual Expr* clone() const = 0;
 
     /**
+     * \brief Evaluate constant expressions
+     *
+     * \return Returns the value of the expression if it
+     *         is constant, or nullopt otherwise
+     */
+    virtual std::optional<double> constant_eval() const = 0;
+
+    /**
      * \brief Internal pretty-printer with associative context 
      *
      * \param ctx Whether the current associative context is ambiguous
@@ -109,6 +119,21 @@ namespace ast {
     Expr& rexp() { return *rexp_; }
     void set_lexp(ptr<Expr> exp) { lexp_ = std::move(exp); }
     void set_rexp(ptr<Expr> exp) { rexp_ = std::move(exp); }
+
+    std::optional<double> constant_eval() const override {
+      auto lexp = lexp_->constant_eval();
+      auto rexp = rexp_->constant_eval();
+
+      if (!lexp || !rexp) return std::nullopt;
+
+      switch(op_) {
+      case BinaryOp::Plus: return *lexp + *rexp;
+      case BinaryOp::Minus: return *lexp - *rexp;
+      case BinaryOp::Times: return *lexp * *rexp;
+      case BinaryOp::Divide: return *lexp / *rexp;
+      case BinaryOp::Pow: return pow(*lexp, *rexp);
+      }
+    }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
@@ -150,8 +175,24 @@ namespace ast {
     {}
 
 	UnaryOp op() const { return op_; }
-    Expr& exp() { return *exp_; }
+    Expr& subexp() { return *exp_; }
     void set_exp(ptr<Expr> exp) { exp_ = std::move(exp); }
+
+    std::optional<double> constant_eval() const override {
+      auto expr = exp_->constant_eval();
+
+      if (!expr) return std::nullopt;
+
+      switch(op_) {
+      case UnaryOp::Neg: return -(*expr);
+      case UnaryOp::Sin: return sin(*expr);
+      case UnaryOp::Cos: return cos(*expr);
+      case UnaryOp::Tan: return tan(*expr);
+      case UnaryOp::Sqrt: return sqrt(*expr);
+      case UnaryOp::Ln: return log(*expr);
+      case UnaryOp::Exp: return exp(*expr);
+      }
+    }
     
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
@@ -184,6 +225,10 @@ namespace ast {
   public:
     PiExpr(parser::Position pos) : Expr(pos) {}
 
+    std::optional<double> constant_eval() const override {
+      return 3.14159265359;
+    }
+
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
       (void)ctx;
@@ -209,6 +254,10 @@ namespace ast {
     IntExpr(parser::Position pos, int value) : Expr(pos), value_(value) {}
 
     int value() const { return value_; }
+
+    std::optional<double> constant_eval() const override {
+      return (double)value_;
+    }
     
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
@@ -235,6 +284,10 @@ namespace ast {
     RealExpr(parser::Position pos, double value) : Expr(pos), value_(value) {}
 
     double value() const { return value_; }
+
+    std::optional<double> constant_eval() const override {
+      return value_;
+    }
     
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
@@ -266,6 +319,10 @@ namespace ast {
     
     const symbol& var() const { return var_; }
     std::optional<int> offset() const { return offset_; }
+
+    std::optional<double> constant_eval() const override {
+      return std::nullopt;
+    }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
