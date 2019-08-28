@@ -21,55 +21,69 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
- * Adapted from Bruno Schmitt's Tweedledee library
+ * Adapted from Bruno Schmitt's Tweedledum library
  */
 #pragma once
 
 namespace synthewareQ {
 namespace util {
 
-  /*! \brief Simple class to represent rotation angles
+  /** \brief Simple class to represent rotation angles
    *
    * A angle can be defined symbolically or numerically. When defined symbolic the angle is always a
    * multiple of pi, i.e., the symbolic value will always multiplied by pi.
    *
    * The numeric value of a rotation angle is given in radians (rad).
    */
-  class angle {
+  class Angle {
     std::variant<std::pair<int, int>, double> value_;
 
   public:
-    constexpr angle(int n, int d) : value_(make_pair(n, d)) {
+    constexpr Angle(int n, int d) : value_(make_pair(n, d)) {
       if (d == 0)
         throw std::invalid_argument("Trying to construct angle with denominator 0");
 
       normalize();
     }
 
-    constexpr angle(double angle) : value_(angle) {}
+    constexpr Angle(double angle) : value_(angle) {}
+
+    /** \brief Returns true if this angle is symbolically defined. */
+    constexpr bool is_symbolic() const {
+      return std::holds_alternative<std::pair<int, int> >(value_);
+    }
 
     /*! \brief Returns true if this angle is symbolically defined. */
     constexpr bool is_numeric() const {
-      return denominator_ == 0;
+      return std::holds_alternative<double>(value_);
     }
 
     /*! \brief Returns the symbolic value of this angle. */
-    constexpr std::optional<fraction_type> symbolic_value() const
-    {
-      if (is_numerically_defined()) {
-        return std::nullopt;
+    constexpr std::optional<std::pair<int, int> > symbolic() const {
+      std::visit(overloaded{
+        [](std::pair<int, int> frac) { return frac; },
+	[](double) { return std::nullopt; }},
+	value_;
       }
-      return std::make_pair(numerator_, denominator_);
+
+      if (is_symbolic()) 
+        return std::get<std::pair<int, int> >(value_);
+      else
+        return std::nullopt;
     }
 
     /*! \brief Returns the numeric value of this angle. */
-    constexpr double numeric_value() const
-    {
-      return numerical_;
+    constexpr double numeric_value() const {
+      if (is_symbolic()) {
+        auto [n, d] = std::get<std::pair<int, int> >(value_);
+	return ((double)n * M_PI) / (double)d;
+      } else {
+        return std::get<double>(value_);
+      }
     }
 
-    constexpr angle operator-() const
-    {
+    constexpr angle operator-() const {
+      std::visit(
       angle result = *this;
       if (!is_numerically_defined()) {
         result.numerator_ = -numerator_;
@@ -154,13 +168,6 @@ namespace util {
     }
 
   private:
-    constexpr void calculate_numerical_value()
-    {
-      double const factor = static_cast<double>(numerator_)
-        / static_cast<double>(denominator_);
-      numerical_ = factor * M_PI;
-    }
-
     constexpr void normalize()
     {
       if (is_numerically_defined()) {
