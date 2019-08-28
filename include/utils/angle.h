@@ -36,7 +36,13 @@
 namespace synthewareQ {
 namespace utils {
 
-  /** \brief Simple class to represent rotation angles
+  /**
+   * \brief \f$ \pi \f$
+   */
+  constexpr double pi = 3.141592653589793238462643383279502884;
+
+  /** 
+   * \brief Simple class to represent rotation angles
    *
    * A angle can be defined symbolically or numerically. When defined symbolic the angle is always a
    * multiple of pi, i.e., the symbolic value will always multiplied by pi.
@@ -86,7 +92,7 @@ namespace utils {
     constexpr double numeric_value() const {
       auto visitor = overloaded{
         [](fraction frac) {
-          return ((double)frac.first * M_PI)/(double)frac.second;
+          return ((double)frac.first * pi)/(double)frac.second;
         },
         [](double real) { return real; }
       };

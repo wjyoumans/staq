@@ -1,17 +1,40 @@
-/*-------------------------------------------------------------------------------------------------
-| This file is distributed under the MIT License.
-| See accompanying file /LICENSE for details.
-| Author(s): Matthew Amy
-*------------------------------------------------------------------------------------------------*/
+/*
+ * This file is part of synthewareQ.
+ *
+ * MIT License
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/**
+ * \file circuits/channel.h
+ * \brief Gates in the channel representation
+ */
 #pragma once
+
+#include "utils/angle.h"
 
 #include <unordered_map>
 #include <map>
 #include <list>
 #include <variant>
 #include <iostream>
-
-#include <tweedledum/utils/angle.hpp>
 
 namespace synthewareQ {
 namespace circuits {
@@ -363,18 +386,18 @@ namespace circuits {
    */
   class rotation_op {
   public:
-    rotation_op() : theta_(td::angles::zero) {}
-    rotation_op(td::angle theta, pauli_op pauli) : theta_(theta), pauli_(pauli) {}
+    rotation_op() : theta_(utils::angles::zero) {}
+    rotation_op(utils::Angle theta, pauli_op pauli) : theta_(theta), pauli_(pauli) {}
 
     /* Gate constructors */
-    static rotation_op t_gate(id q) { return rotation_op(td::angles::pi_quarter, pauli_op::z_gate(q)); }
-    static rotation_op tdg_gate(id q) { return rotation_op(-td::angles::pi_quarter, pauli_op::z_gate(q)); }
-    static rotation_op rz_gate(td::angle theta, id q) { return rotation_op(theta, pauli_op::z_gate(q)); }
-    static rotation_op rx_gate(td::angle theta, id q) { return rotation_op(theta, pauli_op::x_gate(q)); }
-    static rotation_op ry_gate(td::angle theta, id q) { return rotation_op(theta, pauli_op::y_gate(q)); }
+    static rotation_op t_gate(id q) { return rotation_op(utils::angles::pi_quarter, pauli_op::z_gate(q)); }
+    static rotation_op tdg_gate(id q) { return rotation_op(-utils::angles::pi_quarter, pauli_op::z_gate(q)); }
+    static rotation_op rz_gate(utils::Angle theta, id q) { return rotation_op(theta, pauli_op::z_gate(q)); }
+    static rotation_op rx_gate(utils::Angle theta, id q) { return rotation_op(theta, pauli_op::x_gate(q)); }
+    static rotation_op ry_gate(utils::Angle theta, id q) { return rotation_op(theta, pauli_op::y_gate(q)); }
 
     /* Accessors */
-    td::angle rotation_angle() { return theta_; }
+    utils::Angle rotation_angle() { return theta_; }
 
     /* Operators */
 
@@ -403,9 +426,9 @@ namespace circuits {
       return tmp;
     }
 
-    std::optional<std::pair<td::angle, rotation_op> > try_merge(const rotation_op& R) const {
+    std::optional<std::pair<utils::Angle, rotation_op> > try_merge(const rotation_op& R) const {
       if (pauli_ == R.pauli_) {
-        auto phase = td::angles::zero;
+        auto phase = utils::angles::zero;
         auto rotation = rotation_op(theta_ + R.theta_, pauli_);
         return std::make_optional(std::make_pair(phase, rotation));
       } else if (pauli_ == -(R.pauli_)) {
@@ -429,7 +452,7 @@ namespace circuits {
     }
 
   private:
-    td::angle theta_;
+    utils::Angle theta_;
     pauli_op pauli_;
 
   };
