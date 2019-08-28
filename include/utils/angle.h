@@ -25,8 +25,16 @@
  */
 #pragma once
 
+#include "utils/templates.h"
+
+#include <variant>
+#include <cmath>
+#include <optional>
+#include <iostream>
+#include <numeric>
+
 namespace synthewareQ {
-namespace util {
+namespace utils {
 
   /** \brief Simple class to represent rotation angles
    *
@@ -36,21 +44,28 @@ namespace util {
    * The numeric value of a rotation angle is given in radians (rad).
    */
   class Angle {
-    std::variant<std::pair<int, int>, double> value_;
+    using fraction = std::pair<int, int>;
+
+    std::variant<fraction, double> value_;
 
   public:
-    constexpr Angle(int n, int d) : value_(make_pair(n, d)) {
+    constexpr Angle(int n, int d) : value_(std::make_pair(n, d)) {
       if (d == 0)
         throw std::invalid_argument("Trying to construct angle with denominator 0");
 
       normalize();
     }
+    constexpr Angle(fraction angle) : value_(angle) {
+      if (angle.second == 0)
+        throw std::invalid_argument("Trying to construct angle with denominator 0");
 
+      normalize();
+    }
     constexpr Angle(double angle) : value_(angle) {}
 
     /** \brief Returns true if this angle is symbolically defined. */
     constexpr bool is_symbolic() const {
-      return std::holds_alternative<std::pair<int, int> >(value_);
+      return std::holds_alternative<fraction>(value_);
     }
 
     /*! \brief Returns true if this angle is symbolically defined. */
@@ -59,153 +74,182 @@ namespace util {
     }
 
     /*! \brief Returns the symbolic value of this angle. */
-    constexpr std::optional<std::pair<int, int> > symbolic() const {
-      std::visit(overloaded{
-        [](std::pair<int, int> frac) { return frac; },
-	[](double) { return std::nullopt; }},
-	value_;
-      }
-
-      if (is_symbolic()) 
-        return std::get<std::pair<int, int> >(value_);
-      else
+    constexpr std::optional<fraction> symbolic_value() const {
+      if (std::holds_alternative<fraction>(value_)) {
+        return std::get<fraction>(value_);
+      } else {
         return std::nullopt;
+      }
     }
 
     /*! \brief Returns the numeric value of this angle. */
     constexpr double numeric_value() const {
-      if (is_symbolic()) {
-        auto [n, d] = std::get<std::pair<int, int> >(value_);
-	return ((double)n * M_PI) / (double)d;
-      } else {
-        return std::get<double>(value_);
-      }
+      auto visitor = overloaded{
+        [](fraction frac) {
+          return ((double)frac.first * M_PI)/(double)frac.second;
+        },
+        [](double real) { return real; }
+      };
+
+      return std::visit(visitor, value_);
     }
 
-    constexpr angle operator-() const {
-      std::visit(
-      angle result = *this;
-      if (!is_numerically_defined()) {
-        result.numerator_ = -numerator_;
-      }
-      result.numerical_ = -numerical_;
-      return result;
+    constexpr Angle operator-() const {
+      auto visitor = overloaded{
+        [](fraction frac) {
+          return Angle(fraction(-frac.first, frac.second));
+        },
+        [](double real) { return Angle(-real); }
+      };
+
+      return std::visit(visitor, value_);
     }
 
-    bool operator==(angle const& other) const
-    {
+    bool operator==(const Angle& other) const {
       return numeric_value() == other.numeric_value();
     }
 
-    bool operator!=(angle const& other) const
-    {
+    bool operator!=(const Angle& other) const {
       return numeric_value() != other.numeric_value();
     }
 
-    /* When one of the rotation angles is defined numerically, the resulting rotation angle
-     * will be numerically defined.
-     */
-    angle& operator+=(angle const& rhs)
-    {
-      if (is_numerically_defined() || rhs.is_numerically_defined()) {
-        denominator_ = 0;
-        numerical_ += rhs.numeric_value();
-        return *this;
+    Angle& operator+=(const Angle& rhs) {
+      if (is_symbolic() && rhs.is_symbolic()) {
+        auto [a, b] = std::get<fraction>(value_);
+        auto [c, d] = std::get<fraction>(rhs.value_);
+        value_ = fraction(a*d + c*b, b*d);
+        normalize();
+      } else {
+        auto a = numeric_value();
+        auto b = rhs.numeric_value();
+        value_ = a + b;
       }
-      numerator_ = (numerator_ * rhs.denominator_) + (rhs.numerator_ * denominator_);
-      denominator_ = denominator_ * rhs.denominator_;
-      normalize();
+
       return *this;
     }
 
-    friend angle operator+(angle lhs, angle const& rhs)
-    {
-      if (lhs.is_numerically_defined() || rhs.is_numerically_defined()) {
-        lhs.denominator_ = 0;
-        lhs.numerical_ = lhs.numeric_value() + rhs.numeric_value();
-        return lhs;
-      }
-      lhs.numerator_ = (lhs.numerator_ * rhs.denominator_)
-        + (rhs.numerator_ * lhs.denominator_);
-      lhs.denominator_ = lhs.denominator_ * rhs.denominator_;
-      lhs.normalize();
-      return lhs;
+    Angle& operator-=(const Angle& rhs) {
+      *this += -rhs;
+      return *this;
     }
 
-    friend angle operator*(angle lhs, int32_t const& rhs)
-    {
-      if (lhs.is_numerically_defined()) {
-        lhs.denominator_ = 0;
-        lhs.numerical_ = lhs.numeric_value() * rhs;
-        return lhs;
-      }
-      lhs.numerator_ = (lhs.numerator_ * rhs);
-      lhs.normalize();
-      return lhs;
-    }
-
-    friend std::ostream& operator<<(std::ostream& os, angle const& angle)
-    {
-      if (angle.is_numerically_defined()) {
-        os << fmt::format("{:.17f}", angle.numerical_);
+    Angle& operator*=(int fac) {
+      if (is_symbolic()) {
+        auto [a, b] = std::get<fraction>(value_);
+        value_ = fraction(a*fac, b);
+        normalize();
       } else {
-        switch (angle.numerator_) {
+        auto a = numeric_value();
+        value_ = a*(double)fac;
+      }
+
+      return *this;
+    }
+
+    Angle& operator/=(int div) {
+      if (is_symbolic()) {
+        auto [a, b] = std::get<fraction>(value_);
+        value_ = fraction(a, b*div);
+        normalize();
+      } else {
+        auto a = numeric_value();
+        value_ = a/(double)div;
+      }
+
+      return *this;
+    }
+
+    friend Angle operator+(const Angle& lhs, const Angle& rhs) {
+      auto tmp = lhs;
+      tmp += rhs;
+      return tmp;
+    }
+
+    friend Angle operator-(const Angle& lhs, const Angle& rhs) {
+      return lhs + (-rhs);
+    }
+
+    friend Angle operator*(const Angle& lhs, int rhs) {
+      auto tmp = lhs;
+      tmp *= rhs;
+      return tmp;
+    }
+
+    friend Angle operator/(const Angle& lhs, int rhs) {
+      auto tmp = lhs;
+      tmp /= rhs;
+      return tmp;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const Angle& angle) {
+      if (angle.is_symbolic()) {
+        auto [a, b] = std::get<fraction>(angle.value_);
+        switch (a) {
         case 1:
           break;
         case -1:
           os << '-';
           break;
         default:
-          os << angle.numerator_ << '*';
+          os << a << '*';
           break;
         }
         os <<  "pi";
-        if (angle.denominator_ != 1) {
-          os <<  "/" << angle.denominator_;
+        if (b != 1) {
+          os <<  "/" << b;
         }
+      } else {
+        os << std::get<double>(angle.value_);
       }
+
       return os;
     }
 
   private:
-    constexpr void normalize()
-    {
-      if (is_numerically_defined()) {
+    constexpr void normalize() {
+      if (is_numeric()) {
         return;
       }
-      if (numerator_ == 0) {
-        denominator_ = 1;
+
+      auto& [n, d] = std::get<fraction>(value_);
+      if (n == 0) {
+        d = 1;
       } else {
-        int sign = 1;
-        if (numerator_ < 0) {
-          sign = -1;
-          numerator_ = std::abs(numerator_);
+        // calculate the sign & get absolute values
+        int sgn = 1;
+        if (n < 0) {
+          sgn = -1;
+          n = std::abs(n);
         }
-        if (denominator_ < 0) {
-          sign *= -1;
-          denominator_ = std::abs(denominator_);
+        if (d < 0) {
+          sgn *= -1;
+          d = std::abs(d);
         }
-        auto tmp = std::gcd(numerator_, denominator_);
-        numerator_ = numerator_ / tmp * sign;
-        denominator_ = denominator_ / tmp;
+
+        // bring into lowest form
+        auto tmp = std::gcd(n, d);
+        n = n / tmp;
+        d = d / tmp;
+
+        // bring into [0, 2pi) range
+        n = n % (2*d);
+        if (sgn == -1) {
+          n = (2*d) - n;
+        }
       }
-      if (denominator_ == 1) {
-        numerator_ = (numerator_ % 2);
-      }
-      calculate_numerical_value();
     }
 
   };
 
   namespace angles {
     /*! \brief identity */
-    constexpr angle zero(0, 1);
+    constexpr Angle zero(0, 1);
     /*! \brief rotation angle of a T gate */
-    constexpr angle pi_quarter(1, 4);
+    constexpr Angle pi_quarter(1, 4);
     /*! \brief rotation angle of a S gate (phase gate) */
-    constexpr angle pi_half(1, 2);
+    constexpr Angle pi_half(1, 2);
     /*! \brief rotation angle of a Pauli-Z gate, Pauli-X (NOT) */
-    constexpr angle pi(1, 1);
+    constexpr Angle pi(1, 1);
   } // namespace angles
 
 }
