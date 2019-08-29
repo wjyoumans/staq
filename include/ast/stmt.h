@@ -29,6 +29,9 @@
 #pragma once
 
 #include "base.h"
+#include "var.h"
+#include "expr.h"
+
 #include <functional>
 
 namespace synthewareQ {
@@ -61,28 +64,26 @@ namespace ast {
    * \see synthewareQ::ast::Stmt
    */
   class MeasureStmt final : public Stmt {
-    ptr<VarExpr> q_arg_; ///< the quantum bit|register
-    ptr<VarExpr> c_arg_; ///< the classical bit|register
+    VarAccess q_arg_; ///< the quantum bit|register
+    VarAccess c_arg_; ///< the classical bit|register
 
   public:
-    MeasureStmt(parser::Position pos, ptr<VarExpr> q_arg, ptr<VarExpr> c_arg)
+    MeasureStmt(parser::Position pos, VarAccess&& q_arg, VarAccess&& c_arg)
       : Stmt(pos)
       , q_arg_(std::move(q_arg))
       , c_arg_(std::move(c_arg))
     {}
 
-    VarExpr& q_arg() { return *q_arg_; }
-    VarExpr& c_arg() { return *c_arg_; }
-    void set_q_arg(ptr<VarExpr> q_arg) { q_arg_ = std::move(q_arg); }
-    void set_c_arg(ptr<VarExpr> c_arg) { c_arg_ = std::move(c_arg); }
+    VarAccess& q_arg() { return q_arg_; }
+    VarAccess& c_arg() { return c_arg_; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
-      os << "measure " << *q_arg_ << " -> " << *c_arg_ << ";\n";
+      os << "measure " << q_arg_ << " -> " << c_arg_ << ";\n";
       return os;
     }
     MeasureStmt* clone() const override {
-      return new MeasureStmt(pos_, ptr<VarExpr>(q_arg_->clone()), ptr<VarExpr>(c_arg_->clone()));
+      return new MeasureStmt(pos_, VarAccess(q_arg_), VarAccess(c_arg_));
     }
   };
 
@@ -92,21 +93,20 @@ namespace ast {
    * \see synthewareQ::ast::Stmt
    */
   class ResetStmt final : public Stmt {
-    ptr<VarExpr> arg_; ///< the qbit|qreg
+    VarAccess arg_; ///< the qbit|qreg
 
   public:
-    ResetStmt(parser::Position pos, ptr<VarExpr> arg) : Stmt(pos), arg_(std::move(arg)) {}
+    ResetStmt(parser::Position pos, VarAccess&& arg) : Stmt(pos), arg_(std::move(arg)) {}
 
-    VarExpr& arg() { return *arg_; }
-    void set_arg(ptr<VarExpr> arg) { arg_ = std::move(arg); }
+    VarAccess& arg() { return arg_; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
-      os << "reset " << *arg_ << ";\n";
+      os << "reset " << arg_ << ";\n";
       return os;
     }
     ResetStmt* clone() const override {
-      return new ResetStmt(pos_, ptr<VarExpr>(arg_->clone()));
+      return new ResetStmt(pos_, VarAccess(arg_));
     }
   };
 
@@ -163,10 +163,10 @@ namespace ast {
     ptr<Expr> phi_;    ///< phi angle
     ptr<Expr> lambda_; ///< lambda angle
 
-    ptr<VarExpr> arg_; ///< quantum bit|register
+    VarAccess arg_;    ///< quantum bit|register
 
   public:
-    UGate(parser::Position pos, ptr<Expr> theta, ptr<Expr> phi, ptr<Expr> lambda, ptr<VarExpr> arg)
+    UGate(parser::Position pos, ptr<Expr> theta, ptr<Expr> phi, ptr<Expr> lambda, VarAccess&& arg)
       : Gate(pos)
       , theta_(std::move(theta))
       , phi_(std::move(phi))
@@ -177,11 +177,11 @@ namespace ast {
     Expr& theta() { return *theta_; }
     Expr& phi() { return *phi_; }
     Expr& lambda() { return *lambda_; }
-    VarExpr& arg() { return *arg_; }
+    VarAccess& arg() { return arg_; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
-      os << "U(" << *theta_ << "," << *phi_ << "," << *lambda_ << ") " << *arg_ << ";\n";
+      os << "U(" << *theta_ << "," << *phi_ << "," << *lambda_ << ") " << arg_ << ";\n";
       return os;
     }
     UGate* clone() const override {
@@ -189,7 +189,7 @@ namespace ast {
                        ptr<Expr>(theta_->clone()),
                        ptr<Expr>(phi_->clone()),
                        ptr<Expr>(lambda_->clone()),
-                       ptr<VarExpr>(arg_->clone()));
+                       VarAccess(arg_));
     }
   };
 
@@ -199,26 +199,26 @@ namespace ast {
    * \see synthewareQ::ast::Gate
    */
   class CNOTGate final : public Gate {
-    ptr<VarExpr> ctrl_; ///< control qubit|qreg
-    ptr<VarExpr> tgt_;  ///< target qubit|qreg
+    VarAccess ctrl_; ///< control qubit|qreg
+    VarAccess tgt_;  ///< target qubit|qreg
 
   public:
-    CNOTGate(parser::Position pos, ptr<VarExpr> ctrl, ptr<VarExpr> tgt)
+    CNOTGate(parser::Position pos, VarAccess&& ctrl, VarAccess&& tgt)
       : Gate(pos)
       , ctrl_(std::move(ctrl))
       , tgt_(std::move(tgt))
     {}
 
-    VarExpr& ctrl() { return *ctrl_; }
-    VarExpr& tgt() { return *tgt_; }
+    VarAccess& ctrl() { return ctrl_; }
+    VarAccess& tgt() { return tgt_; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
-      os << "CX " << *ctrl_ << *tgt_ << ";\n";
+      os << "CX " << ctrl_ << tgt_ << ";\n";
       return os;
     }
     CNOTGate* clone() const override {
-      return new CNOTGate(pos_, ptr<VarExpr>(ctrl_->clone()), ptr<VarExpr>(tgt_->clone()));
+      return new CNOTGate(pos_, VarAccess(ctrl_), VarAccess(tgt_));
     }
   };
 
@@ -228,36 +228,32 @@ namespace ast {
    * \see synthewareQ::ast::Gate
    */
   class BarrierGate final : public Gate {
-    std::vector<ptr<VarExpr> > args_; ///< list of quantum bits|registers
+    std::vector<VarAccess> args_; ///< list of quantum bits|registers
 
   public:
-    BarrierGate(parser::Position pos, std::vector<ptr<VarExpr> >&& args)
+    BarrierGate(parser::Position pos, std::vector<VarAccess>&& args)
       : Gate(pos)
       , args_(std::move(args))
       {}
 
     int num_args() const { return args_.size(); }
-    VarExpr& arg(int i) { return *(args_[i]); }
-    void foreach_arg(std::function<void(VarExpr&)> f) {
-      for (auto it = args_.begin(); it != args_.end(); it++) f(**it);
+    std::vector<VarAccess>& args() { return args_; }
+    VarAccess& arg(int i) { return args_[i]; }
+    void foreach_arg(std::function<void(VarAccess&)> f) {
+      for (auto it = args_.begin(); it != args_.end(); it++) f(*it);
     }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
       os << "barrier ";
       for (auto it = args_.begin(); it != args_.end(); it++) {
-        os << (it == args_.begin() ? "" : ",") << **it;
+        os << (it == args_.begin() ? "" : ",") << *it;
       }
       os << ";\n";
       return os;
     }
     BarrierGate* clone() const override {
-      std::vector<ptr<VarExpr> > tmp;
-      for (auto it = args_.begin(); it != args_.end(); it++) {
-        tmp.emplace_back(ptr<VarExpr>((*it)->clone()));
-      }
-
-      return new BarrierGate(pos_, std::move(tmp));
+      return new BarrierGate(pos_, std::vector<VarAccess>(args_));
     }
   };
 
@@ -267,15 +263,15 @@ namespace ast {
    * \see synthewareQ::ast::Gate
    */
   class DeclaredGate final : public Gate {
-    symbol name_;                       ///< gate identifier
-    std::vector<ptr<Expr> > c_args_;    ///< list of classical arguments
-    std::vector<ptr<VarExpr> > q_args_; ///< list of quantum arguments
+    symbol name_;                    ///< gate identifier
+    std::vector<ptr<Expr> > c_args_; ///< list of classical arguments
+    std::vector<VarAccess> q_args_;  ///< list of quantum arguments
 
   public:
     DeclaredGate(parser::Position pos,
                  symbol name,
                  std::vector<ptr<Expr> >&& c_args,
-                 std::vector<ptr<VarExpr> >&& q_args)
+                 std::vector<VarAccess>&& q_args)
       : Gate(pos)
       , name_(name)
       , c_args_(std::move(c_args))
@@ -286,12 +282,12 @@ namespace ast {
     int num_cargs() const { return c_args_.size(); }
     int num_qargs() const { return q_args_.size(); }
     Expr& carg(int i) { return *(c_args_[i]); }
-    VarExpr& qarg(int i) { return *(q_args_[i]); }
+    VarAccess& qarg(int i) { return q_args_[i]; }
     void foreach_carg(std::function<void(Expr&)> f) {
       for (auto it = c_args_.begin(); it != c_args_.end(); it++) f(**it);
     }
-    void foreach_qarg(std::function<void(VarExpr&)> f) {
-      for (auto it = q_args_.begin(); it != q_args_.end(); it++) f(**it);
+    void foreach_qarg(std::function<void(VarAccess&)> f) {
+      for (auto it = q_args_.begin(); it != q_args_.end(); it++) f(*it);
     }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
@@ -306,7 +302,7 @@ namespace ast {
       }
       os << " ";
       for (auto it = q_args_.begin(); it != q_args_.end(); it++) {
-        os << (it == q_args_.begin() ? "" : ",") << **it;
+        os << (it == q_args_.begin() ? "" : ",") << *it;
       }
       os << ";\n";
       return os;
@@ -317,12 +313,7 @@ namespace ast {
         c_tmp.emplace_back(ptr<Expr>((*it)->clone()));
       }
 
-      std::vector<ptr<VarExpr> > q_tmp;
-      for (auto it = q_args_.begin(); it != q_args_.end(); it++) {
-        q_tmp.emplace_back(ptr<VarExpr>((*it)->clone()));
-      }
-
-      return new DeclaredGate(pos_, name_, std::move(c_tmp), std::move(q_tmp));
+      return new DeclaredGate(pos_, name_, std::move(c_tmp), std::vector<VarAccess>(q_args_));
     }
   };
 

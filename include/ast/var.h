@@ -23,48 +23,46 @@
  */
 
 /**
- * \file ast/ast.h
- * \brief openQASM syntax trees
+ * \file ast/var.h
+ * \brief openQASM variable utilities
  */
 #pragma once
 
-#include "visitor.h"
-#include <set>
+#include "base.h"
 
 namespace synthewareQ {
 namespace ast {
 
-  template <typename T>
-  using ptr = std::unique_ptr<T>;
-
-  using symbol = std::string;
-
   /**
-   * \class synthewareQ::ast::ASTNode
-   * \brief Base class for AST nodes
+   * \class synthewareQ::ast::VarAccess
+   * \brief Class for variable accesses
    */
-  class ASTNode {
-    static int max_uid_;
-
-  protected:
-    const int uid_;
-    const parser::Position pos_;
+  class VarAccess final : public ASTNode {
+    symbol var_;                ///< the identifier
+    std::optional<int> offset_; ///< optional offset into a register variable
 
   public:
-    ASTNode(parser::Position pos) : uid_(++max_uid_), pos_(pos) { }
-    virtual ~ASTNode() = default;
+    VarAccess(parser::Position pos, symbol var, std::optional<int> offset = std::nullopt)
+      : ASTNode(pos)
+      , var_(var)
+      , offset_(offset)
+    {}
+    VarAccess(const VarAccess& va) : ASTNode(va.pos_), var_(va.var_), offset_(va.offset_) {}
+    
+    const symbol& var() const { return var_; }
+    std::optional<int> offset() const { return offset_; }
 
-    int uid() const { return uid_; }
-
-    virtual void accept(Visitor& visitor) = 0;
-    virtual std::ostream& pretty_print(std::ostream& os) const = 0;
-    virtual ASTNode* clone() const = 0;
+    void accept(Visitor& visitor) override { visitor.visit(*this); }
+    std::ostream& pretty_print(std::ostream& os) const override {
+      os << var_;
+      if (offset_) os << "[" << *offset_ << "]";
+      return os;
+    }
+    VarAccess* clone() const override {
+      return new VarAccess(pos_, var_, offset_);
+    }
   };
-  int ASTNode::max_uid_ = 0;
 
-  std::ostream& operator<<(std::ostream& os, const ASTNode& node) {
-    return node.pretty_print(os);
-  }
 
 }
 }

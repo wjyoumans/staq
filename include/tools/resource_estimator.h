@@ -40,19 +40,16 @@ namespace tools {
   public:
 
     struct config {
-      config() : unbox(true), merge_dagger(true), overrides(ast::qelib_defs) {}
-      config(bool u, const std::set<std::string_view>& o) : unbox(u), overrides(o) {}
-
-      bool unbox;
-      bool merge_dagger;
-      std::set<std::string_view> overrides;
+      bool unbox = true;
+      bool merge_dagger = true;
+      std::set<std::string_view> overrides = ast::qelib_defs;
     };
 
-    ResourceEstimator() : Visitor() {}
-    ResourceEstimator(const config& params) : Visitor() , config_(params) {}
-    ~ResourceEstimator() {}
+    ResourceEstimator() = default;
+    ResourceEstimator(const config& params) : Visitor(), config_(params) {}
+    ~ResourceEstimator() = default;
 
-    resource_count estimate(ast::ASTNode& node) {
+    resource_count run(ast::ASTNode& node) {
       reset();
 
       node.accept(*this);
@@ -70,6 +67,9 @@ namespace tools {
       counts["depth"] = depth;
       return counts;
     }
+
+    /* Variables */
+    void visit(ast::VarAccess&) {}
 
     /* Expressions */
     void visit(ast::BExpr&) {}
@@ -220,7 +220,7 @@ namespace tools {
 
   resource_count estimate_resources(ast::ASTNode& node) {
     ResourceEstimator estimator;
-    return estimator.estimate(node);
+    return estimator.run(node);
   }
 
 }

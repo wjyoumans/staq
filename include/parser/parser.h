@@ -77,7 +77,7 @@ namespace parser {
      *
      * \return A unique pointer to a QCircuit object
      */
-    std::unique_ptr<ast::Program> parse() {
+    ast::ptr<ast::Program> parse() {
       // Parse the program
       auto result = parse_program();
       if (error_)
@@ -185,9 +185,9 @@ namespace parser {
      *
      * \return A QASM AST object
      */
-    std::unique_ptr<ast::Program> parse_program() {
+    ast::ptr<ast::Program> parse_program() {
       auto pos = current_token_.position();
-      std::vector<std::unique_ptr<ast::Stmt> > ret;
+      std::vector<ast::ptr<ast::Stmt> > ret;
 
       // The first (non-comment) line of an Open QASM program must be
       // OPENQASM M.m; indicating a major version M and minor version m.
@@ -270,7 +270,7 @@ namespace parser {
      *
      * \return Unique pointer to a statement object
      */
-    std::unique_ptr<ast::Stmt> parse_reg_decl(bool quantum) {
+    ast::ptr<ast::Stmt> parse_reg_decl(bool quantum) {
       auto pos = current_token_.position();
 
       consume_token();
@@ -292,7 +292,7 @@ namespace parser {
      *
      * \return Unique pointer to a (gate) statement object
      */
-    std::unique_ptr<ast::Gate> parse_ancilla_decl() {
+    ast::ptr<ast::Gate> parse_ancilla_decl() {
       bool dirty = false;
       auto pos = current_token_.position();
 
@@ -320,7 +320,7 @@ namespace parser {
      *
      * \return Unique pointer to a statement object
      */
-    std::unique_ptr<ast::Stmt> parse_gate_decl() {
+    ast::ptr<ast::Stmt> parse_gate_decl() {
       auto pos = current_token_.position();
 
       consume_token();
@@ -335,7 +335,7 @@ namespace parser {
       auto q_params = parse_idlist();
 
       expect_and_consume_token(Token::Kind::l_brace);
-      std::vector<std::unique_ptr<ast::Gate> > body;
+      std::vector<ast::ptr<ast::Gate> > body;
       if (!try_and_consume_token(Token::Kind::r_brace)) {
         body = parse_goplist();
         expect_and_consume_token(Token::Kind::r_brace);
@@ -355,7 +355,7 @@ namespace parser {
      *
      * \return Unique pointer to a statement object
      */
-    std::unique_ptr<ast::Stmt> parse_opaque_decl() {
+    ast::ptr<ast::Stmt> parse_opaque_decl() {
       auto pos = current_token_.position();
 
       consume_token();
@@ -381,7 +381,7 @@ namespace parser {
      *
      * \return Unique pointer to a statement object
      */
-    std::unique_ptr<ast::Stmt> parse_oracle_decl() {
+    ast::ptr<ast::Stmt> parse_oracle_decl() {
       auto pos = current_token_.position();
 
       consume_token();
@@ -404,8 +404,8 @@ namespace parser {
      *
      * \return Vector of gate objects
      */
-    std::vector<std::unique_ptr<ast::Gate> > parse_goplist() {
-      std::vector<std::unique_ptr<ast::Gate> > ret;
+    std::vector<ast::ptr<ast::Gate> > parse_goplist() {
+      std::vector<ast::ptr<ast::Gate> > ret;
       bool finished = false;
 
       while (!finished) {
@@ -438,7 +438,7 @@ namespace parser {
      *
      * \return Unique pointer to a statement object
      */
-    std::unique_ptr<ast::Stmt> parse_qop() {
+    ast::ptr<ast::Stmt> parse_qop() {
       switch (current_token_.kind()) {
       case Token::Kind::kw_cx:
       case Token::Kind::kw_u:
@@ -478,7 +478,7 @@ namespace parser {
      *
      * \return Unique pointer to a gate object
      */
-    std::unique_ptr<ast::Gate> parse_gop() {
+    ast::ptr<ast::Gate> parse_gop() {
       switch (current_token_.kind()) {
       case Token::Kind::kw_dirty:
       case Token::Kind::kw_ancilla:
@@ -543,7 +543,7 @@ namespace parser {
      *
      * \return Variable object
      */
-    std::unique_ptr<ast::VarExpr> parse_argument() {
+    ast::VarAccess parse_argument() {
       auto pos = current_token_.position();
 
       auto id = expect_and_consume_token(Token::Kind::identifier);
@@ -551,10 +551,10 @@ namespace parser {
         auto offset = expect_and_consume_token(Token::Kind::nninteger);
         expect_and_consume_token(Token::Kind::r_square);
 
-        return std::make_unique<ast::VarExpr>(ast::VarExpr(pos, id.as_string(), offset.as_int()));
+        return ast::VarAccess(pos, id.as_string(), offset.as_int());
       }
 
-      return std::make_unique<ast::VarExpr>(ast::VarExpr(pos, id.as_string()));
+      return ast::VarAccess(pos, id.as_string());
     }
 
     /**
@@ -566,13 +566,13 @@ namespace parser {
      *
      * \return Vector of variable objects
      */
-    std::vector<std::unique_ptr<ast::VarExpr> > parse_anylist() {
-      std::vector<std::unique_ptr<ast::VarExpr> > ret;
+    std::vector<ast::VarAccess> parse_anylist() {
+      std::vector<ast::VarAccess> ret;
 
       // doesn't accept empty lists
       while (true) {
         auto arg = parse_argument();
-        ret.push_back(std::move(arg));
+        ret.emplace_back(arg);
         if (!try_and_consume_token(Token::Kind::comma)) {
           break;
         }
@@ -590,9 +590,9 @@ namespace parser {
      *
      * \return Vector of expressions
      */
-    std::vector<std::unique_ptr<ast::Expr> > parse_explist() {
+    std::vector<ast::ptr<ast::Expr> > parse_explist() {
       // doesn't accept empty lists
-      std::vector<std::unique_ptr<ast::Expr> > ret;
+      std::vector<ast::ptr<ast::Expr> > ret;
 
       while (true) {
         auto exp = parse_exp();
@@ -619,7 +619,7 @@ namespace parser {
      *
      * \return Unique pointer to an expression object
      */
-    std::unique_ptr<ast::Expr> parse_exp(int min_precedence = 1) {
+    ast::ptr<ast::Expr> parse_exp(int min_precedence = 1) {
       auto pos = current_token_.position();
 
       auto lexp = parse_atom();
@@ -680,7 +680,7 @@ namespace parser {
      *
      * \return Unique pointer to an expression object
      */
-    std::unique_ptr<ast::Expr> parse_atom() {
+    ast::ptr<ast::Expr> parse_atom() {
       auto pos = current_token_.position();
 
       switch (current_token_.kind()) {
@@ -827,7 +827,7 @@ namespace parser {
      *
      * \return Unique pointer to a gate object
      */
-    std::unique_ptr<ast::Gate> parse_cnot() {
+    ast::ptr<ast::Gate> parse_cnot() {
       auto pos = current_token_.position();
 
       expect_and_consume_token(Token::Kind::kw_cx);
@@ -846,7 +846,7 @@ namespace parser {
      *
      * \return Unique pointer to a gate object
      */
-    std::unique_ptr<ast::Gate> parse_unitary() {
+    ast::ptr<ast::Gate> parse_unitary() {
       auto pos = current_token_.position();
 
       expect_and_consume_token(Token::Kind::kw_u);
@@ -872,11 +872,11 @@ namespace parser {
      *
      * \return Unique pointer to a gate object
      */
-    std::unique_ptr<ast::Gate> parse_gate_statement() {
+    ast::ptr<ast::Gate> parse_gate_statement() {
       auto pos = current_token_.position();
 
       auto id = expect_and_consume_token(Token::Kind::identifier);
-      std::vector<std::unique_ptr<ast::Expr> > c_args;
+      std::vector<ast::ptr<ast::Expr> > c_args;
       if (try_and_consume_token(Token::Kind::l_paren)) {
         c_args = parse_explist();
         expect_and_consume_token(Token::Kind::r_paren);
@@ -896,7 +896,7 @@ namespace parser {
      *
      * \return Unique pointer to a statement object
      */
-    std::unique_ptr<ast::Stmt> parse_measure() {
+    ast::ptr<ast::Stmt> parse_measure() {
       auto pos = current_token_.position();
 
       expect_and_consume_token(Token::Kind::kw_measure);
@@ -915,7 +915,7 @@ namespace parser {
      *
      * \return Unique pointer to a statement object
      */
-    std::unique_ptr<ast::Stmt> parse_reset() {
+    ast::ptr<ast::Stmt> parse_reset() {
       auto pos = current_token_.position();
 
       expect_and_consume_token(Token::Kind::kw_reset);
@@ -932,7 +932,7 @@ namespace parser {
      *
      * \return Unique pointer to a gate object
      */
-    std::unique_ptr<ast::Gate> parse_barrier() {
+    ast::ptr<ast::Gate> parse_barrier() {
       auto pos = current_token_.position();
 
       expect_and_consume_token(Token::Kind::kw_barrier);
@@ -949,7 +949,7 @@ namespace parser {
      *
      * \return Unique pointer to a statement object
      */
-    std::unique_ptr<ast::Stmt> parse_if() {
+    ast::ptr<ast::Stmt> parse_if() {
       auto pos = current_token_.position();
 
       expect_and_consume_token(Token::Kind::kw_if);
@@ -964,7 +964,7 @@ namespace parser {
     }
   };
 
-  std::unique_ptr<ast::Program> parse_file(std::string fname) {
+  ast::ptr<ast::Program> parse_file(std::string fname) {
     Preprocessor pp;
     Parser parser(pp);
 

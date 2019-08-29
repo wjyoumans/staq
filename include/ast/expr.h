@@ -307,18 +307,12 @@ namespace ast {
    * \see synthewareQ::ast::Expr
    */
   class VarExpr final : public Expr {
-    symbol var_;                ///< the identifier
-    std::optional<int> offset_; ///< optional offset into a register variable
+    symbol var_; ///< the identifier
 
   public:
-    VarExpr(parser::Position pos, symbol var, std::optional<int> offset = std::nullopt)
-      : Expr(pos)
-      , var_(var)
-      , offset_(offset)
-    {}
+    VarExpr(parser::Position pos, symbol var) : Expr(pos), var_(var) {}
     
     const symbol& var() const { return var_; }
-    std::optional<int> offset() const { return offset_; }
 
     std::optional<double> constant_eval() const override {
       return std::nullopt;
@@ -327,13 +321,11 @@ namespace ast {
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool ctx) const override {
       (void)ctx;
-      
       os << var_;
-      if (offset_) os << "[" << *offset_ << "]";
       return os;
     }
     VarExpr* clone() const override {
-      return new VarExpr(pos_, var_, offset_);
+      return new VarExpr(pos_, var_);
     }
   };
 

@@ -32,6 +32,7 @@ namespace synthewareQ {
 namespace ast {
 
   /* Forward declarations */
+  class VarAccess;
   class BExpr;
   class UExpr;
   class PiExpr;
@@ -59,6 +60,8 @@ namespace ast {
    */
   class Visitor {
   public:
+    // Variables
+    virtual void visit(VarAccess&) = 0;
     // Expressions
     virtual void visit(BExpr&) = 0;
     virtual void visit(UExpr&) = 0;

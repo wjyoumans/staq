@@ -34,6 +34,14 @@ namespace tools {
   public:
     ASTPrinter(std::ostream& os) : os_(os), prefix_("") {}
 
+    // Variables
+    void visit(ast::VarAccess& ap) {
+      os_ << prefix_ << "|- Var(" << ap.var();
+      if (ap.offset())
+        os_ << "[" << *ap.offset() << "]";
+      os_ << ")\n";
+    }
+
     // Expressions
     void visit(ast::BExpr& expr) {
       os_ << prefix_ << "|- BExpr(" << expr.op() << ")\n";
@@ -66,8 +74,6 @@ namespace tools {
 
     void visit(ast::VarExpr& expr) {
       os_ << prefix_ << "|- Var(" << expr.var();
-      if (expr.offset())
-        os_ << "[" << *expr.offset() << "]";
       os_ << ")\n";
     }
 
