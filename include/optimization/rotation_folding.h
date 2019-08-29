@@ -1,14 +1,35 @@
-/*-------------------------------------------------------------------------------------------------
-| This file is distributed under the MIT License.
-| See accompanying file /LICENSE for details.
-| Author(s): Matthew Amy
-*------------------------------------------------------------------------------------------------*/
+/*
+ * This file is part of synthewareQ.
+ *
+ * MIT License
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/**
+ * \file optimization/rotation_folding.h
+ * \brief Rotation folding algorithm
+ */
 #pragma once
 
-#include "qasm/visitors/generic/base.hpp"
-#include "qasm/visitors/generic/replacer.hpp"
-#include "qasm/visitors/source_printer.hpp"
-#include "circuits/channel_representation.hpp"
+#include "ast/visitor.h"
+#include "circuits/channel.h"
 
 #include <list>
 #include <unordered_map>
@@ -17,162 +38,160 @@
 namespace synthewareQ {
 namespace optimization {
 
-  /*! \brief Rotation gate merging algorithm based on arXiv:1903.12456 
+  /** 
+   * \brief Rotation gate merging algorithm based on arXiv:1903.12456 
    *
    *  Returns a replacement list giving the nodes to the be replaced (or erased)
    */
 
-  // TODO: Add possibility for global phase correction
-  class rotation_folder final : public visitor_base<rotation_folder> {
+  // TODO: Add option for global phase correction
+  class RotationOptimizer final : public Visitor<RotationOptimizer> {
+    using Gatelib = gates::ChannelRepr<VarAccess>;
+
   public:
-    using visitor_base<rotation_folder>::visit;
-    friend visitor_base<rotation_folder>;
+    struct config {
+      bool correct_global_phase;
+    };
 
-    rotation_folder() : visitor_base<rotation_folder>() {}
-    ~rotation_folder() {}
+    RotationOptimizer() = default;
+    RotationOptimizer(const config& params) : Visitor(), config_(params) {}
+    ~RotationOptimizer() = default;
 
-    std::unordered_map<ast_node*, ast_node_list> run(ast_context& ctx) {
-      ctx_ = &ctx;
-      visit(ctx);
+    std::unordered_map<int, std::vector<ast::ptr<ast::Gate> > >
+    run(ast::ASTNode& node) {
+      reset();
+      node.accept(*this);
       return replacement_list_;
     }
 
-  protected:
-    void visit(decl_program* node) {
-      for (auto& child : *node) visit(const_cast<ast_node*>(&child));
-      accum_.push_back(current_clifford_);
+    /* Variables */
+    void visit(ast::VarAccess&) {}
 
-      fold(accum_);
-    }
-
-    void visit(decl_register* node) {}
-    void visit(decl_param* node) {}
-    void visit(decl_gate* node) {
-      // Initialize a new local state
-      circuit_callback local_state;
-      clifford_op local_clifford;
-      std::swap(accum_, local_state);
-      std::swap(current_clifford_, local_clifford);
-
-      for (auto& child : *node) visit(const_cast<ast_node*>(&child));
-      accum_.push_back(current_clifford_);
-
-      fold(accum_);
-      
-      std::swap(accum_, local_state);
-      std::swap(current_clifford_, local_clifford);
-    }
+    /* Expressions */
+    void visit(ast::BExpr&) {}
+    void visit(ast::UExpr&) {}
+    void visit(ast::PiExpr&) {}
+    void visit(ast::IntExpr&) {}
+    void visit(ast::RealExpr&) {}
+    void visit(ast::VarExpr&) {}
 
     /* Statements */
-    void visit(stmt_barrier* node) {
-      auto args = stringify_list(static_cast<list_aps*>(&node->first_arg()));
-      push_uninterp(uninterp_op(args));
+    void visit(ast::MeasureStmt& stmt) {
+      auto arg = stringify(stmt.q_arg());
+      push_uninterp(UninterpOp({ arg }));
     }
-    void visit(stmt_cnot* node) {
-      auto ctrl = stringify(&node->control());
-      auto tgt = stringify(&node->target());
-      if (mergeable_) {
-        current_clifford_ *= clifford_op::cnot_gate(ctrl, tgt);
-      } else {
-        push_uninterp(uninterp_op({ ctrl, tgt }));
-      }
+    void visit(ast::ResetStmt& stmt) {
+      auto arg = stringify(stmt.arg());
+      push_uninterp(UninterpOp({ arg }));
     }
-    void visit(stmt_unitary* node) {
-      auto arg = stringify(&node->arg());
-      push_uninterp(uninterp_op({ arg }));
-    }
-    void visit(stmt_gate* node) {
-      // TODO: deal with other standard library operations
-      std::string name(node->gate());
-      auto arg_list = static_cast<list_aps*>(&node->q_args());
-      auto args = stringify_list(arg_list);
-
-      if (mergeable_) {
-        auto it = args.begin();
-        if (name == "cx") current_clifford_ *= clifford_op::cnot_gate(*it, *(std::next(it)));
-        else if (name == "h") current_clifford_ *= clifford_op::h_gate(*it);
-        else if (name == "x") current_clifford_ *= clifford_op::x_gate(*it);
-        else if (name == "y") current_clifford_ *= clifford_op::y_gate(*it);
-        else if (name == "z") current_clifford_ *= clifford_op::z_gate(*it);
-        else if (name == "s") current_clifford_ *= clifford_op::sdg_gate(*it);
-        else if (name == "sdg") current_clifford_ *= clifford_op::s_gate(*it);
-        else if (name == "t") {
-          auto gate = rotation_op::t_gate(*it);
-          rotation_info info = { node, rotation_info::axis::z, &(*arg_list->begin()) };
-          
-          accum_.push_back(std::make_pair(info, gate.commute_left(current_clifford_)));
-        } else if (name == "tdg") {
-          auto gate = rotation_op::tdg_gate(*it);
-          rotation_info info = { node, rotation_info::axis::z, &(*arg_list->begin()) };
-
-          accum_.push_back(std::make_pair(info, gate.commute_left(current_clifford_)));
-        } else push_uninterp(uninterp_op(args));
-      } else {
-        push_uninterp(uninterp_op(args));
-      }
-    }
-    void visit(stmt_reset* node) {
-      auto arg = stringify(&node->arg());
-      push_uninterp(uninterp_op({ arg }));
-    }
-    void visit(stmt_measure* node) {
-      auto arg = stringify(&node->quantum_arg());
-      push_uninterp(uninterp_op({ arg }));
-    }
-    void visit(stmt_if* node) {
+    void visit(ast::IfStmt& stmt) {
       mergeable_ = false;
-      visit(const_cast<ast_node*>(&node->quantum_op()));
+      stmt.then().accept(*this);
       mergeable_ = true;
     }
 
-    /* Expressions */
-    void visit(expr_var* node) {}
-    void visit(expr_reg_offset* node) {}
-    void visit(expr_integer* node) {}
-    void visit(expr_pi* node) {}
-    void visit(expr_real* node) {}
-    void visit(expr_binary_op* node) {}
-    void visit(expr_unary_op* node) {}
+    /* Gates */
+    void visit(ast::UGate& gate) {
+      auto arg = stringify(gate.arg());
+      push_uninterp(UninterpOp({ arg }));
+    }
+    void visit(ast::CNOTGate& gate) {
+      auto ctrl = stringify(gate.ctrl());
+      auto tgt = stringify(gate.tgt());
+      if (mergeable_) {
+        current_clifford_ *= CliffordOp::cnot_gate(ctrl, tgt);
+      } else {
+        push_uninterp(UninterpOp({ ctrl, tgt }));
+      }
+    }
+    void visit(ast::BarrierGate& gate) {
+      std::vector<std::string> args;
+      gate.foreach_arg([&args, this](auto& arg){ args.emplace_back(stringify(arg)); });
 
-    /* Extensions */
-    void visit(decl_oracle*) {}
-    void visit(decl_ancilla*) {}
+      push_uninterp(UninterpOp(args));
+    }
+    void visit(ast::DeclaredGate& gate) {
+      // TODO: deal with other standard library operations
+      auto name = gate.name();
+      std::vector<std::string> args;
+      gate.foreach_qarg([&args, this](auto& arg){ args.emplace_back(stringify(arg)); });
 
-    /* Lists */
-    void visit(list_gops* node) {
-      for (auto& child : *node) visit(const_cast<ast_node*>(&child));
+      if (mergeable_) {
+        auto it = args.begin();
+        if (name == "cx") current_clifford_ *= CliffordOp::cnot_gate(*it, *(std::next(it)));
+        else if (name == "h") current_clifford_ *= CliffordOp::h_gate(*it);
+        else if (name == "x") current_clifford_ *= CliffordOp::x_gate(*it);
+        else if (name == "y") current_clifford_ *= CliffordOp::y_gate(*it);
+        else if (name == "z") current_clifford_ *= CliffordOp::z_gate(*it);
+        else if (name == "s") current_clifford_ *= CliffordOp::sdg_gate(*it);
+        else if (name == "sdg") current_clifford_ *= CliffordOp::s_gate(*it);
+        else if (name == "t") {
+          auto gate = RotationOp::t_gate(*it);
+          rotation_info info{ gate.uid(), rotation_info::axis::z, &gate.qarg(0) };
+          
+          accum_.push_back(std::make_pair(info, gate.commute_left(current_clifford_)));
+        } else if (name == "tdg") {
+          auto gate = RotationOp::tdg_gate(*it);
+          rotation_info info{ node, rotation_info::axis::z, &gate.qarg(0) };
+
+          accum_.push_back(std::make_pair(info, gate.commute_left(current_clifford_)));
+        } else push_uninterp(UninterpOp(args));
+      } else {
+        push_uninterp(UninterpOp(args));
+      }
     }
-    void visit(list_ids* node) {
-      for (auto& child : *node) visit(const_cast<ast_node*>(&child));
+
+    /* Declarations */
+    void visit(GateDecl& decl) {
+      // Initialize a new local state
+      circuit_callback local_state;
+      CliffordOp local_clifford;
+      std::swap(accum_, local_state);
+      std::swap(current_clifford_, local_clifford);
+
+      // Process gate body
+      gate.foreach_stmt([this](auto& stmt){ stmt.accept(*this); });
+      accum_.push_back(current_clifford_);
+
+      // Fold the gate body
+      fold(accum_);
+
+      // Reset the state
+      std::swap(accum_, local_state);
+      std::swap(current_clifford_, local_clifford);
     }
-    void visit(list_aps* node) {
-      for (auto& child : *node) visit(const_cast<ast_node*>(&child));
-    }
-    void visit(list_exprs* node) {
-      for (auto& child : *node) visit(const_cast<ast_node*>(&child));
+    void visit(ast::OracleDecl&) {}
+    void visit(ast::RegisterDecl&) {}
+    void visit(ast::AncillaDecl&) {}
+
+    /* Program */
+    void visit(ast::Program& prog) {
+      prog.foreach_stmt([this](auto& stmt){ stmt.accept(*this); });
+      accum_.push_back(current_clifford_);
+
+      fold(accum_);
     }
 
   private:
     // Store information necessary for generating a replacement of <node> with a
     // different angle
     struct rotation_info {
-      enum class axis { x, y, z};
+      enum class axis {x, y, z};
       
-      ast_node* node;
+      int uid;
       axis rotation_axis;
-      ast_node* arg;
+      VarExpr* arg;
     };
 
     using circuit_callback =
-      std::list<std::variant<uninterp_op, clifford_op, std::pair<rotation_info, rotation_op> > >;
+      std::list<std::variant<UninterpOp, CliffordOp, std::pair<rotation_info, RotationOp> > >;
 
-    ast_context* ctx_;
     std::unordered_map<ast_node*, ast_node_list> replacement_list_;
 
     /* Algorithm state */
     circuit_callback accum_;       // The currently accumulating circuit (in channel repr.)
     bool mergeable_ = true;        // Whether we're in a context where a gate can be merged
-    clifford_op current_clifford_; // The current clifford operator
+    CliffordOp current_clifford_; // The current clifford operator
     // Note: current clifford is stored as the dagger of the actual Clifford gate
     // this is so that left commutation (i.e. conjugation) actually right-commutes
     // the rotation gate, allowing us to walk the circuit forwards rather than backwards
@@ -182,13 +201,20 @@ namespace optimization {
     //   R_n...R_3R_2R_1C_0
     // as in the paper
 
+    void reset() {
+      replacement_list_.clear();
+      accum_.clear();
+      mergeable_ = true;
+      current_clifford = CliffordOp();
+    }
+
     /* Phase two of the algorithm */
     td::angle fold(circuit_callback& circuit) {
       auto phase = td::angles::zero;
 
       for (auto it = circuit.rbegin(); it != circuit.rend(); it++) {
         auto& op = *it;
-        if (auto tmp = std::get_if<std::pair<rotation_info, rotation_op> >(&op)) {
+        if (auto tmp = std::get_if<std::pair<rotation_info, RotationOp> >(&op)) {
           auto [new_phase, new_R] = fold_forward(circuit, std::next(it), tmp->second);
 
           phase += new_phase;
@@ -205,8 +231,8 @@ namespace optimization {
       return phase;
     }
 
-    std::pair<td::angle, rotation_op>
-    fold_forward(circuit_callback& circuit, circuit_callback::reverse_iterator it, rotation_op R)
+    std::pair<td::angle, RotationOp>
+    fold_forward(circuit_callback& circuit, circuit_callback::reverse_iterator it, RotationOp R)
     {
       // Tries to commute op backward as much as possible, merging with applicable
       // gates and deleting them as it goes
@@ -217,7 +243,7 @@ namespace optimization {
 
       for (; cont && it != circuit.rend(); it++) {
         auto visitor = utils::overloaded {
-          [this, it, &R, &phase, &circuit](std::pair<rotation_info, rotation_op>& Rop) {
+          [this, it, &R, &phase, &circuit](std::pair<rotation_info, RotationOp>& Rop) {
               auto res = R.try_merge(Rop.second);
               if (res.has_value()) {
                 auto &[new_phase, new_R] = res.value();
@@ -235,10 +261,10 @@ namespace optimization {
                 return false;
               }
             },
-            [&R](clifford_op& C) {
+            [&R](CliffordOp& C) {
               R = R.commute_left(C); return true;
             },
-            [&R](uninterp_op& U) {
+            [&R](UninterpOp& U) {
               if (!R.commutes_with(U)) return false;
               else return true;
             }
@@ -251,14 +277,11 @@ namespace optimization {
     }
 
     /* Utilities */
-    std::stringstream stream_;
-    source_printer printer_ = source_printer(stream_);
-
-    void push_uninterp(uninterp_op op) {
+    void push_uninterp(UninterpOp op) {
       accum_.push_back(current_clifford_);
       accum_.push_back(op);
       // Clear the current clifford
-      current_clifford_ = clifford_op();
+      current_clifford_ = CliffordOp();
     }
 
     /*! \brief Returns a qasm expr node with the value of the given angle */
@@ -420,31 +443,17 @@ namespace optimization {
       return stmt_builder.finish();
     }
 
-    void clear() { stream_.str(std::string()); }
+    std::string stringify(VarExpr& var) {
+      std::stringstream ss;
+      ss << var;
 
-    std::string stringify(ast_node* node) {
-      printer_.visit(node);
-      auto tmp = stream_.str();
-      clear();
-
-      return tmp;
+      return ss.str();
     }
 
-    std::list<std::string> stringify_list(list_aps* node) {
-      std::list<std::string> tmp;
-
-      for (auto& child : *node) {
-        printer_.visit(const_cast<ast_node*>(&child));
-        tmp.push_back(stream_.str());
-        clear();
-      }
-
-      return tmp;
-    }
   };
 
-  void rotation_fold(ast_context& ctx) {
-    rotation_folder alg;
+  void fold_rotations(ASTNode& node) {
+    RotationOptimizer optimizer;
 
     auto res = alg.run(ctx);
     bulk_replace(ctx, res);
