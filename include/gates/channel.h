@@ -37,49 +37,43 @@
 #include <iostream>
 
 namespace synthewareQ {
-namespace circuits {
+namespace gates {
   /*! \brief Utilities for the channel representation of Clifford + single qubit gates */
 
-  using symbol = std::string;
-  
-  /* Main declarations */
-  class RotationOp;
-  class CliffordOp;
-  class UninterpOp;
-  typedef std::variant<RotationOp, CliffordOp, UninterpOp> channel_op;
-
+  template<typename qarg>
+  struct ChannelRepr {
 
   /* The single qubit Pauli group and operations on it */
-  enum class Pauli  : unsigned short { i = 0, x = 1, z = 2, y = 3 };
+  enum class PauliOp  : unsigned short { i = 0, x = 1, z = 2, y = 3 };
   enum class IPhase : unsigned short { zero = 0, one = 1, two = 2, three = 3 };
 
 
-  inline Pauli operator*(const Pauli& p, const Pauli& q) {
-    return static_cast<Pauli>(static_cast<unsigned short>(p) ^ static_cast<unsigned short>(q));
+  friend inline PauliOp operator*(const PauliOp& p, const PauliOp& q) {
+    return static_cast<PauliOp>(static_cast<unsigned short>(p) ^ static_cast<unsigned short>(q));
   }
-  inline Pauli& operator*=(Pauli& p, const Pauli& q) {
+  friend inline PauliOp& operator*=(PauliOp& p, const PauliOp& q) {
     p = p * q;
     return p;
   }
-  std::ostream& operator<<(std::ostream& os, const Pauli& p) {
+  friend std::ostream& operator<<(std::ostream& os, const PauliOp& p) {
     switch(p) {
-    case Pauli::i: os << "I"; break;
-    case Pauli::x: os << "X"; break;
-    case Pauli::z: os << "Z"; break;
-    case Pauli::y: os << "Y"; break;
+    case PauliOp::i: os << "I"; break;
+    case PauliOp::x: os << "X"; break;
+    case PauliOp::z: os << "Z"; break;
+    case PauliOp::y: os << "Y"; break;
     }
 
     return os;
   }
 
-  inline IPhase operator*(const IPhase& a, const IPhase& b) {
+  friend inline IPhase operator*(const IPhase& a, const IPhase& b) {
     return static_cast<IPhase>((static_cast<unsigned short>(a) + static_cast<unsigned short>(b)) % 4);
   }
-  inline IPhase operator*=(IPhase& a, const IPhase& b) {
+  friend inline IPhase operator*=(IPhase& a, const IPhase& b) {
     a = a * b;
     return a;
   }
-  std::ostream& operator<<(std::ostream& os, const IPhase& p) {
+  friend std::ostream& operator<<(std::ostream& os, const IPhase& p) {
     switch(p) {
     case IPhase::zero: os << ""; break;
     case IPhase::one: os << "i"; break;
@@ -90,7 +84,7 @@ namespace circuits {
     return os;
   }
 
-  inline IPhase normal_phase(const Pauli& p, const Pauli& q) {
+  inline static IPhase normal_phase(const PauliOp& p, const PauliOp& q) {
     static IPhase phase_mult_table[16] = {
       IPhase::zero, // II
       IPhase::zero, // XI
@@ -114,7 +108,7 @@ namespace circuits {
     return phase_mult_table[idx % 16];
   }
 
-  inline bool paulis_commute (const Pauli& p, const Pauli& q) {
+  inline static bool paulis_commute (const PauliOp& p, const PauliOp& q) {
     static bool commute_table[16] = {
       true, // II
       true, // XI
@@ -139,39 +133,37 @@ namespace circuits {
   }
 
   /*! \brief Class representing an n-qubit pauli operator */
-  class PauliOp {
+  class Pauli {
   public:
-    PauliOp() {}
-    PauliOp(std::pair<symbol, Pauli> gate) { pauli_[gate.first] = gate.second; }
-    PauliOp(std::unordered_map<symbol, Pauli> pauli) : pauli_(pauli) {}
-
-    /* Gate constructors */
-    static PauliOp i_gate(symbol q) { return PauliOp({{ q, Pauli::i }}); }
-    static PauliOp x_gate(symbol q) { return PauliOp({{ q, Pauli::x }}); }
-    static PauliOp z_gate(symbol q) { return PauliOp({{ q, Pauli::z }}); }
-    static PauliOp y_gate(symbol q) { return PauliOp({{ q, Pauli::y }}); }
+    Pauli() {}
+    Pauli(std::pair<qarg, PauliOp> gate) { pauli_[gate.first] = gate.second; }
+    Pauli(std::unordered_map<qarg, PauliOp> pauli) : pauli_(pauli) {}
+    static Pauli i(const qarg& q) { return Pauli({{ q, PauliOp::i }}); }
+    static Pauli x(const qarg& q) { return Pauli({{ q, PauliOp::x }}); }
+    static Pauli z(const qarg& q) { return Pauli({{ q, PauliOp::z }}); }
+    static Pauli y(const qarg& q) { return Pauli({{ q, PauliOp::y }}); }
 
     /* Accessors */
     IPhase phase() const { return phase_; }
 
     template<typename Fn>
-    void for_each(Fn&& fn) const {
-      static_assert(std::is_invocable_r_v<void, Fn, std::pair<symbol, Pauli> const&>);
+    void foreach(Fn&& fn) const {
+      static_assert(std::is_invocable_r_v<void, Fn, std::pair<qarg, PauliOp> const&>);
       for (auto& p : pauli_) fn(p);
     }
 
     /* Operators */
-    PauliOp& operator*=(const IPhase& phase) {
+    Pauli& operator*=(const IPhase& phase) {
       phase_ *= phase;
       return *this;
     }
-    PauliOp operator*(const IPhase& phase) const {
+    Pauli operator*(const IPhase& phase) const {
       auto tmp_(*this);
       tmp_ *= phase;
       return tmp_;
     }
 
-    PauliOp& operator*=(const PauliOp& P) {
+    Pauli& operator*=(const Pauli& P) {
       phase_ *= P.phase_;
       for (auto& [q, p] : P.pauli_) {
         phase_ *= normal_phase(pauli_[q], p);
@@ -179,29 +171,29 @@ namespace circuits {
       }
       return *this;
     }
-    PauliOp operator*(const PauliOp& P) const {
+    Pauli operator*(const Pauli& P) const {
       auto tmp_(*this);
       tmp_ *= P;
       return tmp_;
     }
 
-    PauliOp operator-() const {
+    Pauli operator-() const {
       return (*this) * IPhase::two;
     }
 
-    bool operator==(const PauliOp& P) const {
+    bool operator==(const Pauli& P) const {
       if (phase_ != P.phase_) return false;
       
       for (auto& [q, p] : P.pauli_) {
         auto it = pauli_.find(q);
-        auto tmp = it == pauli_.end() ? Pauli::i : it->second;
+        auto tmp = it == pauli_.end() ? PauliOp::i : it->second;
 
         if (tmp != p) return false;
       }
 
       for (auto& [q, p] : pauli_) {
         auto it = P.pauli_.find(q);
-        auto tmp = it == P.pauli_.end() ? Pauli::i : it->second;
+        auto tmp = it == P.pauli_.end() ? PauliOp::i : it->second;
 
         if (tmp != p) return false;
       }
@@ -209,7 +201,7 @@ namespace circuits {
       return true;
     }
 
-    bool commutes_with(const PauliOp& P) const {
+    bool commutes_with(const Pauli& P) const {
       uint32_t tot_anti = 0;
       
       for (auto& [q, p] : P.pauli_) {
@@ -220,15 +212,15 @@ namespace circuits {
       return (tot_anti % 2) == 0;
     }
 
-    bool trivial_on(const symbol q) const {
+    bool trivial_on(const qarg& q) const {
       auto it = pauli_.find(q);
-      if (it == pauli_.end() || it->second == Pauli::i) return true;
+      if (it == pauli_.end() || it->second == PauliOp::i) return true;
       return false;
     }
 
     bool is_z() const {
       for (auto& [q, p] : pauli_) {
-        if ((p != Pauli::i) && (p != Pauli::z)) return false;
+        if ((p != PauliOp::i) && (p != PauliOp::z)) return false;
       }
       return true;
     }
@@ -243,12 +235,12 @@ namespace circuits {
     }
 
   private:
-    std::unordered_map<symbol, Pauli> pauli_;
+    std::unordered_map<qarg, PauliOp> pauli_;
     IPhase phase_ = IPhase::zero;
 
   };
 
-  std::ostream& operator<<(std::ostream& os, const PauliOp& P) { return P.print(os); }
+  friend std::ostream& operator<<(std::ostream& os, const Pauli& P) { return P.print(os); }
 
 
   /*! \brief Class representing an n-qubit Clifford operator as the normalizer of the Pauli group
@@ -258,60 +250,58 @@ namespace circuits {
    *  group under conjugation -- i.e. CPC^* = CP_1C^*CP_2C^*... 
    *  
    *  Note: no mapping means the operator acts trivially on that generator */
-  class CliffordOp {
+  class Clifford {
   public:
-    CliffordOp() {}
-    CliffordOp(std::map<std::pair<symbol, Pauli>, PauliOp> perm) : perm_(perm) {}
-
-    /* Gate constructors */
-    static CliffordOp h_gate(symbol q) {
-      return CliffordOp(
-        { { std::make_pair(q, Pauli::x), PauliOp::z_gate(q) },
-          { std::make_pair(q, Pauli::z), PauliOp::x_gate(q) },
-          { std::make_pair(q, Pauli::y), -(PauliOp::y_gate(q)) } });
+    Clifford() {}
+    Clifford(std::map<std::pair<qarg, PauliOp>, Pauli> perm) : perm_(perm) {}
+    static Clifford h(const qarg& q) {
+      return Clifford(
+        { { std::make_pair(q, PauliOp::x), Pauli::z(q) },
+          { std::make_pair(q, PauliOp::z), Pauli::x(q) },
+          { std::make_pair(q, PauliOp::y), -(Pauli::y(q)) } });
     }
-    static CliffordOp s_gate(symbol q) {
-      return CliffordOp(
-        { { std::make_pair(q, Pauli::x), PauliOp::y_gate(q) },
-          { std::make_pair(q, Pauli::y), -(PauliOp::x_gate(q)) } });
+    static Clifford s(const qarg& q) {
+      return Clifford(
+        { { std::make_pair(q, PauliOp::x), Pauli::y(q) },
+          { std::make_pair(q, PauliOp::y), -(Pauli::x(q)) } });
     }
-    static CliffordOp sdg_gate(symbol q) {
-      return CliffordOp(
-        { { std::make_pair(q, Pauli::x), -(PauliOp::y_gate(q)) },
-          { std::make_pair(q, Pauli::y), PauliOp::x_gate(q) } });
+    static Clifford sdg(const qarg& q) {
+      return Clifford(
+        { { std::make_pair(q, PauliOp::x), -(Pauli::y(q)) },
+          { std::make_pair(q, PauliOp::y), Pauli::x(q) } });
     }
-    static CliffordOp cnot_gate(symbol q1, symbol q2) {
-      return CliffordOp(
-        { { std::make_pair(q1, Pauli::x), PauliOp::x_gate(q1) * PauliOp::x_gate(q2) },
-          { std::make_pair(q2, Pauli::z), PauliOp::z_gate(q1) * PauliOp::z_gate(q2) },
-          { std::make_pair(q1, Pauli::y), PauliOp::y_gate(q1) * PauliOp::x_gate(q2) },
-          { std::make_pair(q2, Pauli::y), PauliOp::z_gate(q1) * PauliOp::y_gate(q2) } });
+    static Clifford cnot(const qarg& q1, const qarg& q2) {
+      return Clifford(
+        { { std::make_pair(q1, PauliOp::x), Pauli::x(q1) * Pauli::x(q2) },
+          { std::make_pair(q2, PauliOp::z), Pauli::z(q1) * Pauli::z(q2) },
+          { std::make_pair(q1, PauliOp::y), Pauli::y(q1) * Pauli::x(q2) },
+          { std::make_pair(q2, PauliOp::y), Pauli::z(q1) * Pauli::y(q2) } });
     }
-    static CliffordOp x_gate(symbol q) {
-      return CliffordOp(
-        { { std::make_pair(q, Pauli::z), -(PauliOp::z_gate(q)) },
-          { std::make_pair(q, Pauli::y), -(PauliOp::y_gate(q)) } });
+    static Clifford x(const qarg& q) {
+      return Clifford(
+        { { std::make_pair(q, PauliOp::z), -(Pauli::z(q)) },
+          { std::make_pair(q, PauliOp::y), -(Pauli::y(q)) } });
     }
-    static CliffordOp z_gate(symbol q) {
-      return CliffordOp(
-        { { std::make_pair(q, Pauli::x), -(PauliOp::x_gate(q)) },
-          { std::make_pair(q, Pauli::y), -(PauliOp::y_gate(q)) } });
+    static Clifford z(const qarg& q) {
+      return Clifford(
+        { { std::make_pair(q, PauliOp::x), -(Pauli::x(q)) },
+          { std::make_pair(q, PauliOp::y), -(Pauli::y(q)) } });
     }
-    static CliffordOp y_gate(symbol q) {
-      return CliffordOp(
-        { { std::make_pair(q, Pauli::x), -(PauliOp::x_gate(q)) },
-          { std::make_pair(q, Pauli::z), -(PauliOp::z_gate(q)) } });
+    static Clifford y(const qarg& q) {
+      return Clifford(
+        { { std::make_pair(q, PauliOp::x), -(Pauli::x(q)) },
+          { std::make_pair(q, PauliOp::z), -(Pauli::z(q)) } });
     }
 
     /* Operators */
-    PauliOp conjugate(const PauliOp& P) const {
-      PauliOp ret;
+    Pauli conjugate(const Pauli& P) const {
+      Pauli ret;
       ret *= P.phase();
       
-      P.for_each([&ret, this](auto& p) {
+      P.foreach([&ret, this](auto& p) {
           auto it = this->perm_.find(p);
           if (it == perm_.end()) {
-            ret *= PauliOp(p);
+            ret *= Pauli(p);
           } else {
             ret *= it->second;
           }
@@ -320,12 +310,12 @@ namespace circuits {
       return ret;
     }
 
-    CliffordOp& operator*=(const CliffordOp& C) {
+    Clifford& operator*=(const Clifford& C) {
       *this = *this * C;
       return *this;
     }
-    CliffordOp operator*(const CliffordOp& C) {
-      CliffordOp ret(*this);
+    Clifford operator*(const Clifford& C) {
+      Clifford ret(*this);
       for (auto& [pauli_in, pauli_out] : C.perm_) {
         ret.perm_[pauli_in] = conjugate(pauli_out);
       }
@@ -336,7 +326,7 @@ namespace circuits {
     std::ostream& print(std::ostream& os) const {
       os << "{ ";
       for (auto& [pauli_in, pauli_out] : perm_) {
-        os << PauliOp(pauli_in) << " --> " << pauli_out << ", ";
+        os << Pauli(pauli_in) << " --> " << pauli_out << ", ";
       }
       os << "}";
 
@@ -344,21 +334,21 @@ namespace circuits {
     }
 
   private:
-    std::map<std::pair<symbol, Pauli>, PauliOp> perm_;
+    std::map<std::pair<qarg, PauliOp>, Pauli> perm_;
 
   };
 
-  std::ostream& operator<<(std::ostream& os, const CliffordOp& P) { return P.print(os); }
+  friend std::ostream& operator<<(std::ostream& os, const Clifford& P) { return P.print(os); }
 
 
   /*! \brief Class storing an uninterpreted operation on some set of qubits */
-  class UninterpOp {
+  class Uninterp {
   public:
-    UninterpOp(std::list<symbol> qubits) : qubits_(qubits) {}
+    Uninterp(std::list<qarg> qubits) : qubits_(qubits) {}
 
     template<typename Fn>
-    void for_each_qubit(Fn&& fn) const {
-      static_assert(std::is_invocable_r_v<void, Fn, symbol const&>);
+    void foreach_qubit(Fn&& fn) const {
+      static_assert(std::is_invocable_r_v<void, Fn, qarg const&>);
       for (auto& q : qubits_) fn(q);
     }
 
@@ -372,27 +362,36 @@ namespace circuits {
     }
 
   private:
-    std::list<symbol> qubits_;
+    std::list<qarg> qubits_;
   };
     
-  std::ostream& operator<<(std::ostream& os, const UninterpOp& P) { return P.print(os); }
+  friend std::ostream& operator<<(std::ostream& os, const Uninterp& P) { return P.print(os); }
 
 
   /*! \brief Class storing a rotation of some angle around a pauli
    *
    *  (1 + e^i\theta)/2 I + (1 - e^i\theta) P
    */
-  class RotationOp {
+  class Rotation {
   public:
-    RotationOp() : theta_(utils::angles::zero) {}
-    RotationOp(utils::Angle theta, PauliOp pauli) : theta_(theta), pauli_(pauli) {}
+    Rotation() : theta_(utils::angles::zero) {}
+    Rotation(utils::Angle theta, Pauli pauli) : theta_(theta), pauli_(pauli) {}
+    static Rotation t(const qarg& q) {
+      return Rotation(utils::angles::pi_quarter, Pauli::z(q));
+    }
+    static Rotation tdg(const qarg& q) {
+      return Rotation(-utils::angles::pi_quarter, Pauli::z(q));
+    }
+    static Rotation rz(utils::Angle theta, const qarg& q) {
+      return Rotation(theta, Pauli::z(q));
+    }
+    static Rotation rx(utils::Angle theta, const qarg& q) {
+      return Rotation(theta, Pauli::x(q));
+    }
+    static Rotation ry(utils::Angle theta, const qarg& q) {
+      return Rotation(theta, Pauli::y(q));
+    }
 
-    /* Gate constructors */
-    static RotationOp t_gate(symbol q) { return RotationOp(utils::angles::pi_quarter, PauliOp::z_gate(q)); }
-    static RotationOp tdg_gate(symbol q) { return RotationOp(-utils::angles::pi_quarter, PauliOp::z_gate(q)); }
-    static RotationOp rz_gate(utils::Angle theta, symbol q) { return RotationOp(theta, PauliOp::z_gate(q)); }
-    static RotationOp rx_gate(utils::Angle theta, symbol q) { return RotationOp(theta, PauliOp::x_gate(q)); }
-    static RotationOp ry_gate(utils::Angle theta, symbol q) { return RotationOp(theta, PauliOp::y_gate(q)); }
 
     /* Accessors */
     utils::Angle rotation_angle() { return theta_; }
@@ -400,38 +399,38 @@ namespace circuits {
     /* Operators */
 
     // CR(theta, P) == R(theta, P')C
-    RotationOp commute_left(const CliffordOp& C) const {
-      auto tmp = RotationOp(*this);
+    Rotation commute_left(const Clifford& C) const {
+      auto tmp = Rotation(*this);
       tmp.pauli_ = C.conjugate(tmp.pauli_);
       return tmp;
     }
 
-    bool operator==(const RotationOp& R) const {
+    bool operator==(const Rotation& R) const {
       return (theta_ == R.theta_) && (pauli_ == R.pauli_);
     }
 
-    bool commutes_with(const RotationOp& R) const {
+    bool commutes_with(const Rotation& R) const {
       return pauli_.commutes_with(R.pauli_);
     }
 
-    bool commutes_with(const UninterpOp& U) const {
+    bool commutes_with(const Uninterp& U) const {
       auto tmp = true;
 
-      U.for_each_qubit([&tmp, this](symbol q) {
+      U.foreach_qubit([&tmp, this](const qarg& q) {
           tmp &= pauli_.trivial_on(q);
         });
 
       return tmp;
     }
 
-    std::optional<std::pair<utils::Angle, RotationOp> > try_merge(const RotationOp& R) const {
+    std::optional<std::pair<utils::Angle, Rotation> > try_merge(const Rotation& R) const {
       if (pauli_ == R.pauli_) {
         auto phase = utils::angles::zero;
-        auto rotation = RotationOp(theta_ + R.theta_, pauli_);
+        auto rotation = Rotation(theta_ + R.theta_, pauli_);
         return std::make_optional(std::make_pair(phase, rotation));
       } else if (pauli_ == -(R.pauli_)) {
         auto phase = R.theta_;
-        auto rotation = RotationOp(theta_ + -R.theta_, pauli_);
+        auto rotation = Rotation(theta_ + -R.theta_, pauli_);
         return std::make_optional(std::make_pair(phase, rotation));
       } else {
         return std::nullopt;
@@ -451,11 +450,14 @@ namespace circuits {
 
   private:
     utils::Angle theta_;
-    PauliOp pauli_;
+    Pauli pauli_;
 
   };
 
-  std::ostream& operator<<(std::ostream& os, const RotationOp& P) { return P.print(os); }
+  friend std::ostream& operator<<(std::ostream& os, const Rotation& P) { return P.print(os); }
+
+
+};
 
 }
 }

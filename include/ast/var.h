@@ -52,6 +52,22 @@ namespace ast {
     const symbol& var() const { return var_; }
     std::optional<int> offset() const { return offset_; }
 
+    bool operator==(const VarAccess& v) const {
+      return var_ == v.var_ && offset_ == v.offset_;
+    }
+    bool contains(const VarAccess& v) const {
+      if (offset_)
+        return *this == v;
+      else
+        return v.var_ == var_;
+    }
+
+    friend std::size_t hash_value(const VarAccess& v) {
+      size_t lhs = std::hash<symbol>{}(v.var_);
+      lhs ^= std::hash<std::optional<int> >{}(v.offset_) + 0x9e3779b9 + (lhs << 6) + (lhs >> 2);
+      return lhs;
+    }
+
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os) const override {
       os << var_;
