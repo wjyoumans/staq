@@ -31,9 +31,10 @@
 
 #pragma once
 
+#include "position.h"
+
 #include <unordered_map>
 #include <variant>
-#include <string>
 
 namespace synthewareQ {
 namespace parser {

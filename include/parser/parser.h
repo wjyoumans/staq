@@ -31,10 +31,7 @@
 
 #pragma once
 
-#include "parser/token.h"
-#include "parser/lexer.h"
-#include "parser/preprocessor.h"
-
+#include "preprocessor.h"
 #include "ast/ast.h"
 
 namespace synthewareQ {

@@ -29,6 +29,7 @@
 #pragma once
 
 #include "base.h"
+#include "utils/angle.h"
 
 #include <cmath>
 
@@ -328,6 +329,43 @@ namespace ast {
       return new VarExpr(pos_, var_);
     }
   };
+
+  /** 
+   * \brief Returns an Expr for a given angle
+   */
+  ptr<Expr> angle_to_expr(const utils::Angle& theta) {
+    parser::Position pos;
+    
+    if (theta.is_symbolic()) {
+      // Angle is of the form pi*(a/b) for a & b integers
+      auto [a, b] = *(theta.symbolic_value());
+
+      if (a == 0) {
+        return std::make_unique<IntExpr>(IntExpr(pos, 0));
+      } else if (a == 1) {
+        return std::make_unique<BExpr>(
+          pos,
+          std::make_unique<PiExpr>(PiExpr(pos)),
+          BinaryOp::Divide,
+          std::make_unique<IntExpr>(IntExpr(pos, b)));
+      } else {
+        auto subexpr = std::make_unique<BExpr>(
+          pos,
+          std::make_unique<PiExpr>(PiExpr(pos)),
+          BinaryOp::Times,
+          std::make_unique<IntExpr>(IntExpr(pos, a)));
+
+        return std::make_unique<BExpr>(
+          pos,
+          std::move(subexpr),
+          BinaryOp::Divide,
+          std::make_unique<IntExpr>(IntExpr(pos, b)));
+      }
+    } else {
+      // Angle is real-valued
+      return std::make_unique<RealExpr>(RealExpr(parser::Position(), theta.numeric_value()));
+    }
+  }
 
 }
 }

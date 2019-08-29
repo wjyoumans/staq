@@ -32,6 +32,7 @@
 #pragma once
 
 #include "token.h"
+
 #include <memory>
 
 namespace synthewareQ {

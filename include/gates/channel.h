@@ -32,7 +32,7 @@
 
 #include <unordered_map>
 #include <map>
-#include <list>
+#include <vector>
 #include <variant>
 #include <iostream>
 
@@ -344,7 +344,7 @@ namespace gates {
   /*! \brief Class storing an uninterpreted operation on some set of qubits */
   class Uninterp {
   public:
-    Uninterp(std::list<qarg> qubits) : qubits_(qubits) {}
+    Uninterp(std::vector<qarg> qubits) : qubits_(qubits) {}
 
     template<typename Fn>
     void foreach_qubit(Fn&& fn) const {
@@ -362,7 +362,7 @@ namespace gates {
     }
 
   private:
-    std::list<qarg> qubits_;
+    std::vector<qarg> qubits_;
   };
     
   friend std::ostream& operator<<(std::ostream& os, const Uninterp& P) { return P.print(os); }

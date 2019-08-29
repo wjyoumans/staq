@@ -283,6 +283,7 @@ namespace ast {
     int num_qargs() const { return q_args_.size(); }
     Expr& carg(int i) { return *(c_args_[i]); }
     VarAccess& qarg(int i) { return q_args_[i]; }
+    std::vector<VarAccess>& qargs() { return q_args_; }
     void foreach_carg(std::function<void(Expr&)> f) {
       for (auto it = c_args_.begin(); it != c_args_.end(); it++) f(**it);
     }

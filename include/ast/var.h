@@ -42,6 +42,8 @@ namespace ast {
     std::optional<int> offset_; ///< optional offset into a register variable
 
   public:
+    friend std::hash<VarAccess>;
+    
     VarAccess(parser::Position pos, symbol var, std::optional<int> offset = std::nullopt)
       : ASTNode(pos)
       , var_(var)
@@ -54,6 +56,12 @@ namespace ast {
 
     bool operator==(const VarAccess& v) const {
       return var_ == v.var_ && offset_ == v.offset_;
+    }
+    bool operator<(const VarAccess& v) const {
+      if (var_ == v.var_)
+        return offset_ < v.offset_;
+      else
+        return var_ < v.var_;
     }
     bool contains(const VarAccess& v) const {
       if (offset_)
@@ -81,4 +89,16 @@ namespace ast {
 
 
 }
+}
+
+namespace std {
+  template<>
+  struct hash<synthewareQ::ast::VarAccess> {
+    size_t operator()(const synthewareQ::ast::VarAccess& v) const {
+      size_t lhs = std::hash<std::string>{}(v.var_);
+      lhs ^= std::hash<std::optional<int> >{}(v.offset_) + 0x9e3779b9 + (lhs << 6) + (lhs >> 2);
+      return lhs;
+      //return synthewareQ::ast::hash_value(var);
+    }
+  };
 }

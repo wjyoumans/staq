@@ -30,6 +30,9 @@
 
 #pragma once
 
+#include <string>
+#include <iostream>
+
 namespace synthewareQ {
 namespace parser {
 

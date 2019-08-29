@@ -9,8 +9,7 @@
 #include "tools/ast_printer.h"
 #include "tools/resource_estimator.h"
 
-using namespace synthewareQ::parser;
-using namespace synthewareQ::ast;
+using namespace synthewareQ;
 
 int main(int argc, char** argv) {
 
@@ -19,16 +18,21 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  auto prog = parse_file(argv[1]);
-  std::cout << *prog;
+  auto program = parser::parse_file(argv[1]);
+  if (program) {
+    std::cout << "Source:\n" << *program << "\n";
 
-  std::cout << "\nAST:\n";
-  synthewareQ::tools::print_tree(*prog);
+    std::cout << "AST:\n";
+    tools::print_tree(*program);
+    std::cout << "\n";
 
-  std::cout << "\nResource estimates:\n";
-  auto count = synthewareQ::tools::estimate_resources(*prog);
-  for (auto& [name, num] : count) {
-    std::cout << "  " << name << ": " << num << "\n";
+    std::cout << "Resource estimates:\n";
+    auto count = tools::estimate_resources(*program);
+    for (auto& [name, num] : count) {
+      std::cout << "  " << name << ": " << num << "\n";
+    }
+  } else {
+    std::cout << "Parsing failed\n";
   }
 
   return 1;
