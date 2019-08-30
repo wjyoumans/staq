@@ -77,6 +77,9 @@ namespace ast {
     VarAccess& q_arg() { return q_arg_; }
     VarAccess& c_arg() { return c_arg_; }
 
+    void set_qarg(const VarAccess& arg) { q_arg_ = arg; }
+    void set_carg(const VarAccess& arg) { c_arg_ = arg; }
+
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
       os << "measure " << q_arg_ << " -> " << c_arg_ << ";\n";
@@ -99,6 +102,7 @@ namespace ast {
     ResetStmt(parser::Position pos, VarAccess&& arg) : Stmt(pos), arg_(std::move(arg)) {}
 
     VarAccess& arg() { return arg_; }
+    void set_arg(const VarAccess& arg) { arg_ = arg; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
@@ -131,6 +135,7 @@ namespace ast {
     const symbol& var() const { return var_; }
     int cond() const { return cond_; }
     Stmt& then() { return *then_; }
+    void set_then(ptr<Stmt> then) { then_ = std::move(then); }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
@@ -179,6 +184,11 @@ namespace ast {
     Expr& lambda() { return *lambda_; }
     VarAccess& arg() { return arg_; }
 
+    void set_theta(ptr<Expr> theta) { theta_ = std::move(theta); }
+    void set_phi(ptr<Expr> phi) { phi_ = std::move(phi); }
+    void set_lambda(ptr<Expr> lambda) { lambda_ = std::move(lambda); }
+    void set_arg(const VarAccess& arg) { arg_ = arg; }
+
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
       os << "U(" << *theta_ << "," << *phi_ << "," << *lambda_ << ") " << arg_ << ";\n";
@@ -212,6 +222,9 @@ namespace ast {
     VarAccess& ctrl() { return ctrl_; }
     VarAccess& tgt() { return tgt_; }
 
+    void set_ctrl(const VarAccess& ctrl) { ctrl_ = ctrl; }
+    void set_tgt(const VarAccess& tgt) { tgt_ = tgt; }
+
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
       os << "CX " << ctrl_ << tgt_ << ";\n";
@@ -242,6 +255,8 @@ namespace ast {
     void foreach_arg(std::function<void(VarAccess&)> f) {
       for (auto it = args_.begin(); it != args_.end(); it++) f(*it);
     }
+
+    void set_arg(int i, const VarAccess& arg) { args_[i] = arg; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
@@ -290,6 +305,9 @@ namespace ast {
     void foreach_qarg(std::function<void(VarAccess&)> f) {
       for (auto it = q_args_.begin(); it != q_args_.end(); it++) f(*it);
     }
+
+    void set_carg(int i, ptr<Expr> expr) { c_args_[i] = std::move(expr); }
+    void set_qarg(int i, const VarAccess& arg) { q_args_[i] = arg; }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {

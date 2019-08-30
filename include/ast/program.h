@@ -28,6 +28,8 @@
  */
 #pragma once
 
+#include "decl.h"
+
 namespace synthewareQ {
 namespace ast {
 
@@ -36,19 +38,23 @@ namespace ast {
    * \brief Program class
    */
   class Program : public ASTNode {
-    bool std_include_;             ///< whether the program includes qelib1
-    std::vector<ptr<Stmt> > body_; ///< the body of the program
+    bool std_include_;           ///< whether the program includes qelib1
+    std::list<ptr<Stmt> > body_; ///< the body of the program
 
   public:
-    Program(parser::Position pos, bool std_include, std::vector<ptr<Stmt> >&& body)
+    Program(parser::Position pos, bool std_include, std::list<ptr<Stmt> >&& body)
       : ASTNode(pos)
       , std_include_(std_include)
       , body_(std::move(body))
     {}
 
+    std::list<ptr<Stmt> >& body() { return body_; }
     void foreach_stmt(std::function<void(Stmt&)> f) {
       for (auto it = body_.begin(); it != body_.end(); it++) f(**it);
     }
+
+    std::list<ptr<Stmt> >::iterator begin() { return body_.begin(); }
+    std::list<ptr<Stmt> >::iterator end() { return body_.end(); }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os) const override {
@@ -60,7 +66,7 @@ namespace ast {
       }
     }
     Program* clone() const override {
-      std::vector<ptr<Stmt> > tmp;
+      std::list<ptr<Stmt> > tmp;
       for (auto it = body_.begin(); it != body_.end(); it++) {
         tmp.emplace_back(ptr<Stmt>((*it)->clone()));
       }

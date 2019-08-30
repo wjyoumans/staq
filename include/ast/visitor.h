@@ -86,6 +86,6 @@ namespace ast {
     // Program
     virtual void visit(Program&) = 0;
   };
-
+    
 }
 }

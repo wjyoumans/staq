@@ -54,6 +54,12 @@ namespace ast {
     const symbol& var() const { return var_; }
     std::optional<int> offset() const { return offset_; }
 
+    VarAccess& operator=(const VarAccess& v) {
+      var_ = v.var_;
+      offset_ = v.offset_;
+      return *this;
+    }
+
     bool operator==(const VarAccess& v) const {
       return var_ == v.var_ && offset_ == v.offset_;
     }

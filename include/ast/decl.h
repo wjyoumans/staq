@@ -30,6 +30,8 @@
 
 #include "stmt.h"
 
+#include <list>
+
 namespace synthewareQ {
 namespace ast {
 
@@ -66,10 +68,10 @@ namespace ast {
    * \see synthewareQ::ast::Decl
    */
   class GateDecl final : public Stmt, public Decl {
-    bool opaque_;                 ///< whether the declaration is opaque
+    bool opaque_;                  ///< whether the declaration is opaque
     std::vector<symbol> c_params_; ///< classical parameters
     std::vector<symbol> q_params_; ///< quantum parameters
-    std::vector<ptr<Gate> > body_;   ///< gate body
+    std::list<ptr<Gate> > body_;   ///< gate body
 
   public:
     /**
@@ -82,7 +84,7 @@ namespace ast {
      * \param body List of gate statements
      */
     GateDecl(parser::Position pos, symbol id, bool opaque, std::vector<symbol> c_params,
-             std::vector<symbol> q_params, std::vector<ptr<Gate> >&& body)
+             std::vector<symbol> q_params, std::list<ptr<Gate> >&& body)
       : Stmt(pos), Decl(id)
       , opaque_(opaque)
       , c_params_(c_params)
@@ -93,9 +95,13 @@ namespace ast {
     bool is_opaque() { return opaque_; }
     std::vector<symbol>& c_params() { return c_params_; }
     std::vector<symbol>& q_params() { return q_params_; }
+    std::list<ptr<Gate> >& body() { return body_; }
     void foreach_stmt(std::function<void(Gate&)> f) {
       for (auto it = body_.begin(); it != body_.end(); it++) f(**it);
     }
+
+    std::list<ptr<Gate> >::iterator begin() { return body_.begin(); }
+    std::list<ptr<Gate> >::iterator end() { return body_.end(); }
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool suppress_std) const override {
@@ -125,7 +131,7 @@ namespace ast {
       }
     }
     GateDecl* clone() const override {
-      std::vector<ptr<Gate> > tmp;
+      std::list<ptr<Gate> > tmp;
       for (auto it = body_.begin(); it != body_.end(); it++) {
         tmp.emplace_back(ptr<Gate>((*it)->clone()));
       }

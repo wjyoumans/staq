@@ -34,6 +34,8 @@
 #include "preprocessor.h"
 #include "ast/ast.h"
 
+#include <list>
+
 namespace synthewareQ {
 namespace parser {
 
@@ -184,7 +186,7 @@ namespace parser {
      */
     ast::ptr<ast::Program> parse_program() {
       auto pos = current_token_.position();
-      std::vector<ast::ptr<ast::Stmt> > ret;
+      std::list<ast::ptr<ast::Stmt> > ret;
 
       // The first (non-comment) line of an Open QASM program must be
       // OPENQASM M.m; indicating a major version M and minor version m.
@@ -332,7 +334,7 @@ namespace parser {
       auto q_params = parse_idlist();
 
       expect_and_consume_token(Token::Kind::l_brace);
-      std::vector<ast::ptr<ast::Gate> > body;
+      std::list<ast::ptr<ast::Gate> > body;
       if (!try_and_consume_token(Token::Kind::r_brace)) {
         body = parse_goplist();
         expect_and_consume_token(Token::Kind::r_brace);
@@ -401,8 +403,8 @@ namespace parser {
      *
      * \return Vector of gate objects
      */
-    std::vector<ast::ptr<ast::Gate> > parse_goplist() {
-      std::vector<ast::ptr<ast::Gate> > ret;
+    std::list<ast::ptr<ast::Gate> > parse_goplist() {
+      std::list<ast::ptr<ast::Gate> > ret;
       bool finished = false;
 
       while (!finished) {
@@ -568,8 +570,7 @@ namespace parser {
 
       // doesn't accept empty lists
       while (true) {
-        auto arg = parse_argument();
-        ret.emplace_back(arg);
+        ret.emplace_back(parse_argument());
         if (!try_and_consume_token(Token::Kind::comma)) {
           break;
         }
@@ -592,8 +593,7 @@ namespace parser {
       std::vector<ast::ptr<ast::Expr> > ret;
 
       while (true) {
-        auto exp = parse_exp();
-        ret.push_back(std::move(exp));
+        ret.emplace_back(parse_exp());
         if (!try_and_consume_token(Token::Kind::comma)) {
           break;
         }

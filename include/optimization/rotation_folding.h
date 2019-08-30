@@ -28,7 +28,7 @@
  */
 #pragma once
 
-#include "ast/visitor.h"
+#include "ast/replacer.h"
 #include "gates/channel.h"
 
 #include <list>
@@ -57,11 +57,11 @@ namespace optimization {
     RotationOptimizer(const config& params) : Visitor(), config_(params) {}
     ~RotationOptimizer() = default;
 
-    std::unordered_map<int, std::vector<ast::Gate*> >
+    std::unordered_map<int, std::list<ast::ptr<ast::Gate> > >
     run(ast::ASTNode& node) {
       reset();
       node.accept(*this);
-      return replacement_list_;
+      return std::move(replacement_list_);
     }
 
     /* Variables */
@@ -213,7 +213,7 @@ namespace optimization {
                                                     std::pair<rotation_info, Gatelib::Rotation> > >;
 
     config config_;
-    std::unordered_map<int, std::vector<ast::Gate*> > replacement_list_;
+    std::unordered_map<int, std::vector<ast::ptr<ast::Gate> > > replacement_list_;
 
     /* Algorithm state */
     circuit_callback accum_;             // The currently accumulating circuit (in channel repr.)
@@ -246,12 +246,12 @@ namespace optimization {
 
           phase += new_phase;
           if (!(new_R == tmp->second)) {
-            std::vector<ast::Gate*> subst;
+            std::list<ast::ptr<ast::Gate> > subst;
 
             auto rot = alloc_rot(tmp->first, new_R.rotation_angle());
             if (rot)
-              subst.push_back(rot);
-            replacement_list_[tmp->first.uid] = subst;
+              subst.emplace_back(rot);
+            replacement_list_[tmp->first.uid] = std::move(subst);
           }
         }
       }
@@ -279,7 +279,7 @@ namespace optimization {
                 R = new_R;
 
                 // Delete R in circuit & the node
-                replacement_list_[P.first.uid] = std::vector<ast::Gate*>(); 
+                replacement_list_[P.first.uid] = std::move(std::list<ast::ptr<ast::Gate> >()); 
                 circuit.erase(std::next(it).base());
 
                 return false;
@@ -397,7 +397,7 @@ namespace optimization {
     RotationOptimizer optimizer;
 
     auto res = optimizer.run(node);
-    //bulk_replace(ctx, res);
+    replace_gates(node, std::move(res));
   }
 
 }

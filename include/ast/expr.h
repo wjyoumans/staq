@@ -177,7 +177,7 @@ namespace ast {
 
 	UnaryOp op() const { return op_; }
     Expr& subexp() { return *exp_; }
-    void set_exp(ptr<Expr> exp) { exp_ = std::move(exp); }
+    void set_subexp(ptr<Expr> exp) { exp_ = std::move(exp); }
 
     std::optional<double> constant_eval() const override {
       auto expr = exp_->constant_eval();
