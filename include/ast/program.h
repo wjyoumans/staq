@@ -64,6 +64,8 @@ namespace ast {
       for (auto it = body_.begin(); it != body_.end(); it++) {
         (*it)->pretty_print(os, std_include_);
       }
+
+      return os;
     }
     Program* clone() const override {
       std::list<ptr<Stmt> > tmp;

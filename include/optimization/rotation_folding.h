@@ -28,6 +28,7 @@
  */
 #pragma once
 
+#include "ast/visitor.h"
 #include "ast/replacer.h"
 #include "gates/channel.h"
 
@@ -213,7 +214,7 @@ namespace optimization {
                                                     std::pair<rotation_info, Gatelib::Rotation> > >;
 
     config config_;
-    std::unordered_map<int, std::vector<ast::ptr<ast::Gate> > > replacement_list_;
+    std::unordered_map<int, std::list<ast::ptr<ast::Gate> > > replacement_list_;
 
     /* Algorithm state */
     circuit_callback accum_;             // The currently accumulating circuit (in channel repr.)

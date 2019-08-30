@@ -77,20 +77,26 @@ namespace ast {
 
     void visit(BExpr& expr) override {
       expr.lexp().accept(*this);
-      if (replacement_expr_)
+      if (replacement_expr_) {
         expr.set_lexp(std::move(*replacement_expr_));
+        replacement_expr_ = std::nullopt;
+      }
 
       expr.rexp().accept(*this);
-      if (replacement_expr_)
+      if (replacement_expr_) {
         expr.set_rexp(std::move(*replacement_expr_));
+        replacement_expr_ = std::nullopt;
+      }
 
       replacement_expr_ = replace(expr);
     }
 
     void visit(UExpr& expr) override {
       expr.subexp().accept(*this);
-      if (replacement_expr_)
+      if (replacement_expr_) {
         expr.set_subexp(std::move(*replacement_expr_));
+        replacement_expr_ = std::nullopt;
+      }
 
       replacement_expr_ = replace(expr);
     }
@@ -102,60 +108,80 @@ namespace ast {
                
     void visit(MeasureStmt& stmt) override {
       stmt.q_arg().accept(*this);
-      if (replacement_var_)
+      if (replacement_var_) {
         stmt.set_qarg(std::move(*replacement_var_));
+        replacement_var_ = std::nullopt;
+      }
       
       stmt.c_arg().accept(*this);
-      if (replacement_var_)
+      if (replacement_var_) {
         stmt.set_carg(std::move(*replacement_var_));
+        replacement_var_ = std::nullopt;
+      }
 
       replacement_stmts_ = replace(stmt);
     }
 
     void visit(ResetStmt& stmt) override {
       stmt.arg().accept(*this);
-      if (replacement_var_)
+      if (replacement_var_) {
         stmt.set_arg(std::move(*replacement_var_));
+        replacement_var_ = std::nullopt;
+      }
 
       replacement_stmts_ = replace(stmt);
     }
 
     void visit(IfStmt& stmt) override {
       stmt.then().accept(*this);
-      if (replacement_stmts_)
+      if (replacement_stmts_) {
         stmt.set_then(std::move(replacement_stmts_->front()));
+        replacement_stmts_ = std::nullopt;
+      }
 
       replacement_stmts_ = replace(stmt);
     }
         
     void visit(UGate& gate) override {
       gate.theta().accept(*this);
-      if (replacement_expr_)
+      if (replacement_expr_) {
         gate.set_theta(std::move(*replacement_expr_));
+        replacement_expr_ = std::nullopt;
+      }
 
       gate.phi().accept(*this);
-      if (replacement_expr_)
+      if (replacement_expr_) {
         gate.set_phi(std::move(*replacement_expr_));
+        replacement_expr_ = std::nullopt;
+      }
 
       gate.lambda().accept(*this);
-      if (replacement_expr_)
+      if (replacement_expr_) {
         gate.set_lambda(std::move(*replacement_expr_));
+        replacement_expr_ = std::nullopt;
+      }
 
       gate.arg().accept(*this);
-      if (replacement_var_)
+      if (replacement_var_) {
         gate.set_arg(std::move(*replacement_var_));
+        replacement_var_ = std::nullopt;
+      }
 
       replacement_gates_ = replace(gate);
     }
 
     void visit(CNOTGate& gate) override {
       gate.ctrl().accept(*this);
-      if (replacement_var_)
+      if (replacement_var_) {
         gate.set_ctrl(std::move(*replacement_var_));
+        replacement_var_ = std::nullopt;
+      }
 
       gate.tgt().accept(*this);
-      if (replacement_var_)
+      if (replacement_var_) {
         gate.set_tgt(std::move(*replacement_var_));
+        replacement_var_ = std::nullopt;
+      }
 
       replacement_gates_ = replace(gate);
     }
@@ -163,8 +189,10 @@ namespace ast {
     void visit(BarrierGate& gate) override {
       for (int i = 0; i < gate.num_args(); i++) {
         gate.arg(i).accept(*this);
-        if (replacement_var_)
+        if (replacement_var_) {
           gate.set_arg(i, std::move(*replacement_var_));
+          replacement_var_ = std::nullopt;
+        }
       }
 
       replacement_gates_ = replace(gate);
@@ -173,14 +201,18 @@ namespace ast {
     void visit(DeclaredGate& gate) override {
       for (int i = 0; i < gate.num_cargs(); i++) {
         gate.carg(i).accept(*this);
-        if (replacement_expr_)
+        if (replacement_expr_) {
           gate.set_carg(i, std::move(*replacement_expr_));
+          replacement_expr_ = std::nullopt;
+        }
       }
 
       for (int i = 0; i < gate.num_qargs(); i++) {
         gate.qarg(i).accept(*this);
-        if (replacement_var_)
+        if (replacement_var_) {
           gate.set_qarg(i, std::move(*replacement_var_));
+          replacement_var_ = std::nullopt;
+        }
       }
 
       replacement_gates_ = replace(gate);
@@ -189,8 +221,12 @@ namespace ast {
     void visit(GateDecl& decl) override {
       for (auto it = decl.begin(); it != decl.end(); it++) {
         (**it).accept(*this);
-        if (replacement_gates_)
+        if (replacement_gates_) {
+          it = decl.body().erase(it);
           decl.body().splice(it, std::move(*replacement_gates_));
+          replacement_gates_ = std::nullopt;
+          it--;
+        }
       }
 
       replacement_stmts_ = replace(decl);
@@ -210,8 +246,21 @@ namespace ast {
     void visit(Program& prog) override {
       for (auto it = prog.begin(); it != prog.end(); it++) {
         (**it).accept(*this);
-        if (replacement_stmts_)
+        if (replacement_stmts_) {
+          it = prog.body().erase(it);
           prog.body().splice(it, std::move(*replacement_stmts_));
+          replacement_stmts_ = std::nullopt;
+          it--;
+        }
+        else if (replacement_gates_) {
+          it = prog.body().erase(it);
+          for (auto ti = replacement_gates_->begin(); ti != replacement_gates_->end(); ti++) {
+            prog.body().emplace(it, std::move(*ti));
+          }
+          //prog.body().splice(it, std::move(*replacement_gates_));
+          replacement_gates_ = std::nullopt;
+          it--;
+        }
       }
     }
   };
@@ -237,7 +286,7 @@ namespace ast {
       auto it = replacements_.find(gate.uid());
       
       if (it != replacements_.end())
-        return it->second;
+        return std::move(it->second);
       else
         return std::nullopt;
     }
@@ -247,3 +296,6 @@ namespace ast {
     GateReplacer replacer(std::move(replacements));
     node.accept(replacer);
   }
+
+}
+}
