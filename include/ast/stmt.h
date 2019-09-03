@@ -227,7 +227,7 @@ namespace ast {
 
     void accept(Visitor& visitor) override { visitor.visit(*this); }
     std::ostream& pretty_print(std::ostream& os, bool) const override {
-      os << "CX " << ctrl_ << tgt_ << ";\n";
+      os << "CX " << ctrl_ << "," << tgt_ << ";\n";
       return os;
     }
     CNOTGate* clone() const override {

@@ -55,6 +55,7 @@ namespace ast {
     virtual ~ASTNode() = default;
 
     int uid() const { return uid_; }
+    parser::Position pos() const { return pos_; }
 
     virtual void accept(Visitor& visitor) = 0;
     virtual std::ostream& pretty_print(std::ostream& os) const = 0;
