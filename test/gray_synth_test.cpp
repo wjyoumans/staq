@@ -53,10 +53,10 @@ int main(int argc, char** argv) {
   std::cout << "\n(Unmapped) synthesized circuit:\n";
   for (auto& gate : circuit) {
     std::visit(utils::overloaded {
-        [](std::pair<size_t, size_t>& cnot) {
+        [](std::pair<int, int>& cnot) {
           std::cout << "CNOT " << cnot.first << "," << cnot.second << ";\n";
         },
-        [](std::pair<utils::Angle, size_t>& rz) {
+        [](std::pair<utils::Angle, int>& rz) {
           std::cout << "RZ(" << rz.first << ") " << rz.second << ";\n";
         }}, gate);
   }
@@ -66,10 +66,10 @@ int main(int argc, char** argv) {
   std::cout << "\n(Mapped) synthesized circuit:\n";
   for (auto& gate : mapped_circuit) {
     std::visit(utils::overloaded {
-        [](std::pair<size_t, size_t>& cnot) {
+        [](std::pair<int, int>& cnot) {
           std::cout << "CNOT " << cnot.first << "," << cnot.second << ";\n";
         },
-        [](std::pair<utils::Angle, size_t>& rz) {
+        [](std::pair<utils::Angle, int>& rz) {
           std::cout << "RZ(" << rz.first << ") " << rz.second << ";\n";
         }}, gate);
   }

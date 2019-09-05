@@ -979,6 +979,15 @@ namespace parser {
     return parser.parse();
   }
 
+  ast::ptr<ast::Program> parse_stdin() {
+    Preprocessor pp;
+    Parser parser(pp);
+
+    pp.add_target_stream(std::shared_ptr<std::istream>(&std::cin));
+
+    return parser.parse();
+  }
+
 
 } /* namespace qasm */
 } /* namespace qpp */

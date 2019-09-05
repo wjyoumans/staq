@@ -28,8 +28,11 @@
  */
 #pragma once
 
+#include "parser/position.h"
 #include "visitor.h"
+
 #include <set>
+#include <memory>
 
 namespace synthewareQ {
 namespace ast {

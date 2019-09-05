@@ -90,25 +90,21 @@ namespace utils {
 
     /*! \brief Returns the numeric value of this angle. */
     constexpr double numeric_value() const {
-      auto visitor = overloaded{
-        [](fraction frac) {
-          return ((double)frac.first * pi)/(double)frac.second;
-        },
-        [](double real) { return real; }
-      };
-
-      return std::visit(visitor, value_);
+      if (std::holds_alternative<fraction>(value_)) {
+        auto frac = std::get<fraction>(value_);
+        return ((double)frac.first * pi)/(double)frac.second;
+      } else {
+        return std::get<double>(value_);
+      }
     }
 
     constexpr Angle operator-() const {
-      auto visitor = overloaded{
-        [](fraction frac) {
-          return Angle(fraction(-frac.first, frac.second));
-        },
-        [](double real) { return Angle(-real); }
-      };
-
-      return std::visit(visitor, value_);
+      if (std::holds_alternative<fraction>(value_)) {
+        auto frac = std::get<fraction>(value_);
+        return Angle(-frac.first, frac.second);
+      } else {
+        return Angle(-std::get<double>(value_));
+      }
     }
 
     bool operator==(const Angle& other) const {
