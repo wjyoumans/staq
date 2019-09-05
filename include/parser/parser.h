@@ -983,7 +983,9 @@ namespace parser {
     Preprocessor pp;
     Parser parser(pp);
 
-    pp.add_target_stream(std::shared_ptr<std::istream>(&std::cin));
+    // This is a bad idea, but it's necessary for automatic bookkeeping
+    // accross all different forms and sources of source streams
+    pp.add_target_stream(std::shared_ptr<std::istream>(&std::cin, [](std::istream*){}));
 
     return parser.parse();
   }
