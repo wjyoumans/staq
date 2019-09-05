@@ -1,11 +1,11 @@
-#include "parser/parser.h"
+#include "parser/parser.hpp"
 
-#include "mapping/device.h"
-#include "mapping/layout/basic.h"
-#include "mapping/layout/eager.h"
-#include "mapping/layout/bestfit.h"
-#include "mapping/mapping/swap.h"
-#include "mapping/mapping/steiner.h"
+#include "mapping/device.hpp"
+#include "mapping/layout/basic.hpp"
+#include "mapping/layout/eager.hpp"
+#include "mapping/layout/bestfit.hpp"
+#include "mapping/mapping/swap.hpp"
+#include "mapping/mapping/steiner.hpp"
 
 using namespace synthewareQ;
 

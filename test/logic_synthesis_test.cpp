@@ -1,5 +1,5 @@
-#include "parser/parser.h"
-#include "transformations/oracle_synthesizer.h"
+#include "parser/parser.hpp"
+#include "transformations/oracle_synthesizer.hpp"
 
 using namespace synthewareQ;
 

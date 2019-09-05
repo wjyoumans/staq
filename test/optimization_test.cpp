@@ -1,6 +1,6 @@
-#include "parser/parser.h"
-#include "optimization/rotation_folding.h"
-#include "tools/resource_estimator.h"
+#include "parser/parser.hpp"
+#include "optimization/rotation_folding.hpp"
+#include "tools/resource_estimator.hpp"
 
 #include <unordered_map>
 

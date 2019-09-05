@@ -22,20 +22,44 @@
  * SOFTWARE.
  */
 
-#include "parser/parser.hpp"
-#include "transformations/inline.hpp"
+#pragma once
 
-using namespace synthewareQ;
+#include "ast/replacer.hpp"
+#include "synthesis/logic_synthesis.hpp"
 
-int main() {
+namespace synthewareQ {
+namespace transformations {
 
-  auto program = parser::parse_stdin();
-  if (program) {
-    transformations::inline_ast(*program);
-    std::cout << *program;
-  } else {
-    std::cerr << "Parsing failed\n";
+  /** 
+   * \brief Synthesizes all declared oracles over standard library gates
+   *
+   * Visits an AST and synthesizes any declared oracles,
+   * replacing them with regular gate declarations which may
+   * optionally declare local ancillas 
+   */
+
+  /* Implementation */
+  class OracleSynthesizer final : public ast::Replacer {
+  public:
+    
+    OracleSynthesizer() = default;
+    ~OracleSynthesizer() = default;
+
+    std::optional<std::list<ast::ptr<ast::Stmt> > > replace(ast::OracleDecl& decl) {
+      auto l_net = synthesis::read_network(decl.fname());
+      auto body = synthesis::synthesize_net(decl.pos(), l_net, decl.params());
+
+      std::list<ast::ptr<ast::Stmt> > ret;
+      ret.emplace_back(std::make_unique<ast::GateDecl>(ast::GateDecl(
+        decl.pos(), decl.id(), false, {}, decl.params(), std::move(body))));
+      return std::move(ret);
+    }
+  };
+
+  void synthesize_oracles(ast::ASTNode& node) {
+    OracleSynthesizer alg;
+    node.accept(alg);
   }
-
-  return 1;
+    
+}
 }

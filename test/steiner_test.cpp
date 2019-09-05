@@ -1,4 +1,4 @@
-#include "mapping/device.h"
+#include "mapping/device.hpp"
 
 #include <list>
 #include <iostream>

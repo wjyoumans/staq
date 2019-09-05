@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#include "parser/parser.h"
-#include "optimization/rotation_folding.h"
+#include "parser/parser.hpp"
+#include "optimization/rotation_folding.hpp"
 
 using namespace synthewareQ;
 

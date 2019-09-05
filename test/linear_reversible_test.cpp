@@ -1,5 +1,5 @@
-#include "mapping/device.h"
-#include "synthesis/linear_reversible.h"
+#include "mapping/device.hpp"
+#include "synthesis/linear_reversible.hpp"
 
 #include <vector>
 #include <list>

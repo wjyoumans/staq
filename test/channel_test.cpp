@@ -1,4 +1,4 @@
-#include "gates/channel.h"
+#include "gates/channel.hpp"
 #include <unordered_map>
 #include <set>
 #include <iostream>

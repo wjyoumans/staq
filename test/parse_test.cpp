@@ -1,13 +1,13 @@
+#include "parser/position.hpp"
+#include "ast/ast.hpp"
+#include "parser/parser.hpp"
+#include "tools/ast_printer.hpp"
+#include "tools/resource_estimator.hpp"
+
 #include <iostream>
 #include <string>
 #include <memory>
 #include <optional>
-
-#include "parser/position.h"
-#include "ast/ast.h"
-#include "parser/parser.h"
-#include "tools/ast_printer.h"
-#include "tools/resource_estimator.h"
 
 using namespace synthewareQ;
 

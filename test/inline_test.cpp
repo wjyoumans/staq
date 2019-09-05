@@ -1,5 +1,5 @@
-#include "parser/parser.h"
-#include "transformations/inline.h"
+#include "parser/parser.hpp"
+#include "transformations/inline.hpp"
 
 using namespace synthewareQ;
 

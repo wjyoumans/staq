@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#include "parser/parser.h"
-#include "transformations/desugar.h"
+#include "parser/parser.hpp"
+#include "transformations/desugar.hpp"
 
 using namespace synthewareQ;
 

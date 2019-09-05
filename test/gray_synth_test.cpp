@@ -1,7 +1,7 @@
-#include "mapping/device.h"
-#include "synthesis/cnot_dihedral.h"
-#include "utils/templates.h"
-#include "utils/angle.h"
+#include "mapping/device.hpp"
+#include "synthesis/cnot_dihedral.hpp"
+#include "utils/templates.hpp"
+#include "utils/angle.hpp"
 
 #include <vector>
 #include <list>

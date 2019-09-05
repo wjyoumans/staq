@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#include "parser/parser.h"
-#include "tools/resource_estimator.h"
+#include "parser/parser.hpp"
+#include "tools/resource_estimator.hpp"
 
 using namespace synthewareQ;
 
