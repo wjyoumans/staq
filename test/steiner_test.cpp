@@ -1,6 +1,4 @@
-#define FMT_HEADER_ONLY = true
-
-#include "mapping/device.hpp"
+#include "mapping/device.h"
 
 #include <list>
 #include <iostream>
