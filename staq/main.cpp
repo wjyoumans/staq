@@ -32,6 +32,7 @@
 #include "transformations/barrier_merge.hpp"
 #include "transformations/expression_simplifier.hpp"
 
+#include "optimization/timeslice.hpp"
 #include "optimization/simplify.hpp"
 #include "optimization/rotation_folding.hpp"
 #include "optimization/cnot_resynthesis.hpp"
